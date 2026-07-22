@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>
+
+        OctoRecon Report - {{ report.target }}
+
+    </title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+</head>
+
+<body>
+
+    <div class="scan-grid" aria-hidden="true"></div>
+
+    <div class="report-actions">
+
+        <button class="action-button" onclick="window.print()" type="button" aria-label="Print this report">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                    d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2M6 14h12v7H6z"
+                    stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Print Report
+        </button>
+
+        <button class="action-button" onclick="exportToExcel()" type="button" aria-label="Export this report to Excel">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                <path d="M4 9h16M4 14h16M9.5 4v16" stroke="currentColor" stroke-width="1.6" />
+            </svg>
+            Export to Excel
+        </button>
+
+    </div>
+
+    <div class="container">
+
+        <!-- ================================= -->
+        <!-- Header -->
+        <!-- ================================= -->
+
+        <header>
+
+            <div class="header-left">
+
+                <div class="brand-mark" aria-hidden="true">
+                    <span class="brand-sweep"></span>
+                    <span class="brand-dot"></span>
+                </div>
+
+                <div>
+                    <h1>
+                        OctoRecon
+                    </h1>
+
+                    <span class="eyebrow">
+                        Passive Web Reconnaissance Framework
+                    </span>
+                </div>
+
+                <span class="status-pill mono">
+                    <span class="status-dot"></span>
+                    Scan Complete
+                </span>
+
+            </div>
+
+            <div class="header-right">
+
+                <table class="meta-table">
+
+                    <tr>
+
+                        <td>Target</td>
+
+                        <td class="mono">
+
+                            {{ report.target }}
+
+                        </td>
+
+                    </tr>
+
+                    <tr>
+
+                        <td>Version</td>
+
+                        <td class="mono">
+
+                            {{ report.version }}
+
+                        </td>
+
+                    </tr>
+
+                    <tr>
+
+                        <td>Generated</td>
+
+                        <td class="mono">
+
+                            {{ report.scan_time }}
+
+                        </td>
+
+                    </tr>
+
+                    <tr>
+
+                        <td>Modules</td>
+
+                        <td class="mono">
+
+                            {{ report.modules|length }}
+
+                        </td>
+
+                    </tr>
+
+                </table>
+
+            </div>
+
+        </header>
+
+        <!-- ================================= -->
+        <!-- Summary -->
+        <!-- ================================= -->
+
+        {% set grade_class = 'grade-a' if 'A' in report.summary.grade else ('grade-b' if 'B' in report.summary.grade
+        else ('grade-c' if 'C' in report.summary.grade else ('grade-d' if 'D' in report.summary.grade else 'grade-f')))
+        %}
+
+        <section class="summary">
+
+            <div class="card card-gauge">
+
+                <h3>
+
+                    Security Score
+
+                </h3>
+
+                <div class="gauge" style="--pct: {{ report.summary.percentage }};">
+                    <div class="gauge-inner">
+                        <span class="big">
+                            {{ report.summary.score }}<span class="gauge-sep">/</span>{{ report.summary.maximum }}
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="card">
+
+                <h3>
+
+                    Percentage
+
+                </h3>
+
+                <div class="big mono">
+
+                    {{ report.summary.percentage }}<span class="unit">%</span>
+
+                </div>
+
+                <div class="track">
+                    <div class="track-fill" style="width: {{ report.summary.percentage }}%;"></div>
+                </div>
+
+            </div>
+
+            <div class="card">
+
+                <h3>
+
+                    Grade
+
+                </h3>
+
+                <div class="grade {{ grade_class }}">
+
+                    {{ report.summary.grade }}
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ================================= -->
+        <!-- Jinja Macro -->
+        <!-- ================================= -->
+
+        {% macro render_table(columns, rows) %}
+
+        <div class="table-scroll">
+            <table class="data-table">
+
+                <thead>
+
+                    <tr>
+
+                        {% for column in columns %}
+
+                        <th>
+
+                            {{ column }}
+
+                        </th>
+
+                        {% endfor %}
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for row in rows %}
+
+                    <tr>
+
+                        {% if row is mapping %}
+
+                        {% for column in columns %}
+
+                        <td>
+
+                            {{ row[column] }}
+
+                        </td>
+
+                        {% endfor %}
+
+                        {% else %}
+
+                        {% for cell in row %}
+
+                        <td>
+
+                            {{ cell }}
+
+                        </td>
+
+                        {% endfor %}
+
+                        {% endif %}
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+        </div>
+
+        {% endmacro %}
+
+        <!-- ================================= -->
+        <!-- Module Loop -->
+        <!-- ================================= -->
+
+        <section class="modules">
+
+            {% for module_name, module in report.modules.items() %}
+
+            {% set has_score = module["max_score"] is defined and module["max_score"] %}
+
+            {% if has_score %}
+            {% set risk_pct = (module["score"] / module["max_score"] * 100) %}
+            {% set risk_class = 'risk-good' if risk_pct >= 80 else ('risk-warn' if risk_pct >= 50 else 'risk-bad') %}
+            {% else %}
+            {% set risk_class = 'risk-neutral' %}
+            {% endif %}
+
+            <article class="module {{ risk_class }}" style="--i: {{ loop.index }};">
+
+                <div class="module-header">
+
+                    <div class="module-heading">
+
+                        <span class="type-icon" aria-hidden="true">
+                            {% if module["type"] == "table" %}
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="1.6"
+                                    stroke-linecap="round" />
+                            </svg>
+                            {% elif module["type"] == "keyvalue" %}
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor"
+                                    stroke-width="1.6" />
+                                <path d="M9 4v16" stroke="currentColor" stroke-width="1.6" />
+                            </svg>
+                            {% elif module["type"] == "list" %}
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <circle cx="5" cy="6" r="1.4" fill="currentColor" />
+                                <circle cx="5" cy="12" r="1.4" fill="currentColor" />
+                                <circle cx="5" cy="18" r="1.4" fill="currentColor" />
+                                <path d="M10 6h10M10 12h10M10 18h10" stroke="currentColor" stroke-width="1.6"
+                                    stroke-linecap="round" />
+                            </svg>
+                            {% elif module["type"] == "text" %}
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="1.6" />
+                                <path d="M8 9h8M8 13h5" stroke="currentColor" stroke-width="1.6"
+                                    stroke-linecap="round" />
+                            </svg>
+                            {% elif module["type"] == "chart" %}
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="1.6"
+                                    stroke-linecap="round" />
+                            </svg>
+                            {% else %}
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" />
+                                <path d="M12 8v5M12 16h.01" stroke="currentColor" stroke-width="1.6"
+                                    stroke-linecap="round" />
+                            </svg>
+                            {% endif %}
+                        </span>
+
+                        <div>
+
+                            <span class="eyebrow module-slug mono">{{ module_name }}</span>
+
+                            <h2>
+
+                                {{ module["title"] }}
+
+                            </h2>
+
+                            {% if module["description"] %}
+
+                            <p class="description">
+
+                                {{ module["description"] }}
+
+                            </p>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                    {% if has_score %}
+                    <div class="module-score mono">
+
+                        {{ module["score"] }}
+
+                        <span class="score-sep">/</span>
+
+                        {{ module["max_score"] }}
+
+                    </div>
+                    {% endif %}
+
+                </div>
+
+                <div class="module-body">
+
+                    {% if module["type"] == "table" %}
+
+                    {% if module["rows"] %}
+
+                    {{ render_table(module["columns"], module["rows"]) }}
+
+                    {% else %}
+
+                    <div class="empty-state">
+
+                        <p>No data available.</p>
+
+                    </div>
+
+                    {% endif %}
+
+                    {% elif module["type"] == "keyvalue" %}
+
+                    {% if module["data"] %}
+
+                    <table class="kv-table">
+
+                        <tbody>
+
+                            {% for key, value in module["data"].items() %}
+
+                            <tr>
+
+                                <th>
+
+                                    {{ key }}
+
+                                </th>
+
+                                <td>
+
+                                    {{ value }}
+
+                                </td>
+
+                            </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                    {% else %}
+
+                    <div class="empty-state">
+
+                        <p>No information available.</p>
+
+                    </div>
+
+                    {% endif %}
+
+                    {% elif module["type"] == "list" %}
+
+                    {% if module["items"] %}
+
+                    <ul class="report-list">
+
+                        {% for item in module["items"] %}
+
+                        <li>
+
+                            {{ item }}
+
+                        </li>
+
+                        {% endfor %}
+
+                    </ul>
+
+                    {% else %}
+
+                    <div class="empty-state">
+
+                        <p>No items found.</p>
+
+                    </div>
+
+                    {% endif %}
+
+                    {% elif module["type"] == "text" %}
+
+                    <div class="report-text">
+
+                        <pre>{{ module["content"] }}</pre>
+
+                    </div>
+
+                    {% elif module["type"] == "chart" %}
+
+                    <div class="chart-container">
+
+                        <h3>
+
+                            {{ module["title"] }}
+
+                        </h3>
+
+                        <p>
+
+                            {{ module["description"] }}
+
+                        </p>
+
+                        <div class="chart-placeholder">
+
+                            Chart rendering support will be available in a future release.
+
+                        </div>
+
+                    </div>
+
+                    {% else %}
+
+                    <div class="unknown-module">
+
+                        <strong>
+
+                            Unsupported Module Type
+
+                        </strong>
+
+                        <br><br>
+
+                        {{ module["type"] }}
+
+                    </div>
+
+                    {% endif %}
+
+                </div>
+
+            </article>
+
+            {% endfor %}
+
+            {% if report.modules|length == 0 %}
+
+            <article class="module risk-neutral">
+
+                <h2>
+
+                    No Module Output
+
+                </h2>
+
+                <p>
+
+                    This scan did not produce any reportable module output.
+
+                </p>
+
+            </article>
+
+            {% endif %}
+
+        </section>
+
+        <!-- ================================= -->
+        <!-- Footer -->
+        <!-- ================================= -->
+
+        <footer>
+
+            <hr>
+
+            <div class="footer-grid">
+
+                <div class="footer-card">
+
+                    <h4>
+
+                        Scan Information
+
+                    </h4>
+
+                    <table>
+
+                        <tr>
+
+                            <td><strong>Target</strong></td>
+
+                            <td class="mono">{{ report.target }}</td>
+
+                        </tr>
+
+                        <tr>
+
+                            <td><strong>Generated</strong></td>
+
+                            <td class="mono">{{ report.scan_time }}</td>
+
+                        </tr>
+
+                        <tr>
+
+                            <td><strong>Framework</strong></td>
+
+                            <td>OctoRecon</td>
+
+                        </tr>
+
+                        <tr>
+
+                            <td><strong>Version</strong></td>
+
+                            <td class="mono">{{ report.version }}</td>
+
+                        </tr>
+
+                    </table>
+
+                </div>
+
+                <div class="footer-card">
+
+                    <h4>
+
+                        Scan Summary
+
+                    </h4>
+
+                    <table>
+
+                        <tr>
+
+                            <td><strong>Total Modules</strong></td>
+
+                            <td class="mono">{{ report.modules|length }}</td>
+
+                        </tr>
+
+                        <tr>
+
+                            <td><strong>Security Score</strong></td>
+
+                            <td class="mono">
+
+                                {{ report.summary.score }}
+
+                                /
+
+                                {{ report.summary.maximum }}
+
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <td><strong>Percentage</strong></td>
+
+                            <td class="mono">{{ report.summary.percentage }}%</td>
+
+                        </tr>
+
+                        <tr>
+
+                            <td><strong>Grade</strong></td>
+
+                            <td class="mono">{{ report.summary.grade }}</td>
+
+                        </tr>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <div class="footer-bottom">
+
+                <p>
+
+                    Generated by <strong>OctoRecon</strong>
+
+                </p>
+
+                <p>
+
+                    Passive Web Reconnaissance Framework
+
+                </p>
+
+                <p>
+
+                    © {{ report.scan_time[:4] if report.scan_time else "" }} OctoRecon Project
+
+                </p>
+
+            </div>
+
+        </footer>
+
+    </div>
+
+    <script id="report-data" type="application/json">{{ report | tojson }}</script>
+
+    <script>
+        function sanitizeSheetName(name, used) {
+            let clean = String(name || "Module")
+                .replace(/[\\/?*\[\]:]/g, " ")
+                .trim()
+                .slice(0, 31) || "Module";
+
+            let unique = clean;
+            let n = 2;
+
+            while (used.has(unique.toLowerCase())) {
+                const suffix = " (" + n + ")";
+                unique = clean.slice(0, 31 - suffix.length) + suffix;
+                n += 1;
+            }
+
+            used.add(unique.toLowerCase());
+            return unique;
+        }
+
+        function normalizeTableRows(rows, columns) {
+            // Handles both list-of-lists rows and list-of-dicts rows
+            const cols = columns && columns.length
+                ? columns
+                : (Array.isArray(rows[0])
+                    ? rows[0].map((_, i) => "Column " + (i + 1))
+                    : Object.keys(rows[0]));
+
+            const normalizedRows = rows.map((row) => {
+                if (Array.isArray(row)) {
+                    const obj = {};
+                    cols.forEach((col, i) => { obj[col] = row[i]; });
+                    return obj;
+                }
+                return row;
+            });
+
+            return { columns: cols, rows: normalizedRows };
+        }
+
+        function exportToExcel() {
+            const report = JSON.parse(
+                document.getElementById("report-data").textContent
+            );
+
+            const wb = XLSX.utils.book_new();
+            const usedNames = new Set();
+
+            const summaryRows = [
+                ["Field", "Value"],
+                ["Target", report.target],
+                ["Version", report.version],
+                ["Generated", report.scan_time],
+                ["Modules", Object.keys(report.modules || {}).length],
+                ["Score", report.summary.score + " / " + report.summary.maximum],
+                ["Percentage", report.summary.percentage + "%"],
+                ["Grade", report.summary.grade],
+            ];
+
+            const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+            XLSX.utils.book_append_sheet(
+                wb,
+                summarySheet,
+                sanitizeSheetName("Summary", usedNames)
+            );
+
+            for (const [moduleKey, module] of Object.entries(report.modules || {})) {
+
+                let sheet;
+
+                if (module.type === "table" && module.rows && module.rows.length) {
+
+                    const { columns, rows } = normalizeTableRows(module.rows, module.columns);
+                    sheet = XLSX.utils.json_to_sheet(rows, { header: columns });
+
+                } else if (module.type === "keyvalue" && module.data) {
+
+                    const rows = Object.entries(module.data).map(
+                        ([key, value]) => ({ Key: key, Value: value })
+                    );
+                    sheet = XLSX.utils.json_to_sheet(rows);
+
+                } else if (module.type === "list" && module.items && module.items.length) {
+
+                    const rows = module.items.map((item) => ({ Item: item }));
+                    sheet = XLSX.utils.json_to_sheet(rows);
+
+                } else if (module.type === "text" && module.content) {
+
+                    sheet = XLSX.utils.aoa_to_sheet([
+                        ["Content"],
+                        [module.content],
+                    ]);
+
+                } else {
+
+                    sheet = XLSX.utils.aoa_to_sheet([
+                        ["No exportable data for this module."],
+                    ]);
+                }
+
+                XLSX.utils.book_append_sheet(
+                    wb,
+                    sheet,
+                    sanitizeSheetName(module.title || moduleKey, usedNames)
+                );
+            }
+
+            const safeTarget = String(report.target || "report")
+                .replace(/^https?:\/\//, "")
+                .replace(/[\\/:*?"<>|]/g, "_");
+
+            XLSX.writeFile(wb, `OctoRecon-${safeTarget}.xlsx`);
+        }
+    </script>
+
+</body>
+
+</html>

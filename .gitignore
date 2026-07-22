@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+.vscode/
+.idea/
+dist/
+build/
+*.egg-info/
+reports/*
+!reports/.gitkeep
+logs/*
+!logs/.gitkeep
+output/
