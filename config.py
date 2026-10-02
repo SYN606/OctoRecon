@@ -31,15 +31,25 @@ DATABASE_DIR.mkdir(exist_ok=True)
 # ===============================
 # HTTP Configuration
 # ===============================
+import os
+from dotenv import load_dotenv
 
-TIMEOUT = 15
-VERIFY_SSL = True
-FOLLOW_REDIRECTS = True
+load_dotenv()
 
-USER_AGENT = (
-    "OctoRecon/1.0 "
-    "(Passive Recon Framework)"
-)
+TIMEOUT = int(os.getenv("OCTORECON_TIMEOUT", 15))
+VERIFY_SSL = os.getenv("OCTORECON_VERIFY_SSL", "True").lower() == "true"
+FOLLOW_REDIRECTS = os.getenv("OCTORECON_FOLLOW_REDIRECTS", "True").lower() == "true"
+
+USER_AGENT = os.getenv("OCTORECON_USER_AGENT", "OctoRecon/1.0 (Passive Recon Framework)")
+
+# ===============================
+# API Keys (Loaded from .env)
+# ===============================
+ALIENVAULT_API_KEY = os.getenv("ALIENVAULT_API_KEY")
+SECURITYTRAILS_API_KEY = os.getenv("SECURITYTRAILS_API_KEY")
+VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
+SHODAN_API_KEY = os.getenv("SHODAN_API_KEY")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 # ===============================
 # Broken Link Scanner
