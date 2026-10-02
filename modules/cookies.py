@@ -15,9 +15,7 @@ class CookieScanner(BaseModule):
     name = "Cookies"
     category = "Web"
 
-    description = (
-        "Analyze cookies and security attributes."
-    )
+    description = ("Analyze cookies and security attributes.")
 
     async def run(self, scanner):
 
@@ -37,34 +35,26 @@ class CookieScanner(BaseModule):
 
             table.add_row("-", "-")
 
-            rows.append(
-                {
-                    "Cookie": "-",
-                    "Value": "-",
-                }
-            )
+            rows.append({
+                "Cookie": "-",
+                "Value": "-",
+            })
 
         else:
 
             for name, value in cookies.items():
 
-                display = (
-                    value[:40] + "..."
-                    if len(value) > 40
-                    else value
-                )
+                display = (value[:40] + "..." if len(value) > 40 else value)
 
                 table.add_row(
                     name,
                     display,
                 )
 
-                rows.append(
-                    {
-                        "Cookie": name,
-                        "Value": display,
-                    }
-                )
+                rows.append({
+                    "Cookie": name,
+                    "Value": display,
+                })
 
             # Presence of cookies reduces the score slightly.
             score = max(0, score - min(len(rows), 5))

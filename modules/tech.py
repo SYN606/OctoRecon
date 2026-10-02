@@ -22,6 +22,7 @@ from core.report_schema import Report
 # Technology Object
 # ==========================================================
 
+
 @dataclass
 class Technology:
 
@@ -42,144 +43,112 @@ class Technology:
 # ==========================================================
 
 HEADER_SIGNATURES = {
-
     "Server": {
-
         "Apache": {
             "category": "Web Server",
             "pattern": r"Apache/?([\d\.]+)?",
         },
-
         "Nginx": {
             "category": "Web Server",
             "pattern": r"nginx/?([\d\.]+)?",
         },
-
         "Microsoft IIS": {
             "category": "Web Server",
             "pattern": r"Microsoft-IIS/?([\d\.]+)?",
         },
-
         "LiteSpeed": {
             "category": "Web Server",
             "pattern": r"LiteSpeed/?([\d\.]+)?",
         },
-
         "Caddy": {
             "category": "Web Server",
             "pattern": r"Caddy/?([\d\.]+)?",
         },
-
         "OpenResty": {
             "category": "Web Server",
             "pattern": r"openresty/?([\d\.]+)?",
         },
-
         "Apache Tomcat": {
             "category": "Web Server",
             "pattern": r"(?:Apache-)?Tomcat/?([\d\.]+)?",
         },
-
         "Jetty": {
             "category": "Web Server",
             "pattern": r"Jetty\(?([\d\.]+)?",
         },
-
         "Cowboy": {
             "category": "Web Server",
             "pattern": r"Cowboy",
         },
-
         "Gunicorn": {
             "category": "Web Server",
             "pattern": r"gunicorn/?([\d\.]+)?",
         },
-
         "uWSGI": {
             "category": "Web Server",
             "pattern": r"uWSGI",
         },
-
         "Kestrel": {
             "category": "Web Server",
             "pattern": r"Kestrel",
         },
-
         "Google Frontend": {
             "category": "Web Server",
             "pattern": r"\bgws\b",
         },
-
         "Amazon S3": {
             "category": "Hosting",
             "pattern": r"AmazonS3",
         },
-
         "Werkzeug": {
             "category": "Backend",
             "pattern": r"Werkzeug/?([\d\.]+)?",
         },
-
         "uvicorn": {
             "category": "Backend",
             "pattern": r"uvicorn",
         },
-
         "Cloudflare": {
             "category": "CDN",
             "pattern": r"cloudflare",
         },
-
         "DDoS-Guard": {
             "category": "WAF",
             "pattern": r"ddos-guard",
         },
-
     },
-
     "X-Powered-By": {
-
         "PHP": {
             "category": "Backend",
             "pattern": r"PHP/?([\d\.]+)?",
         },
-
         "ASP.NET": {
             "category": "Backend",
             "pattern": r"ASP\.NET",
         },
-
         "Express": {
             "category": "Backend",
             "pattern": r"Express",
         },
-
         "Next.js": {
             "category": "Frontend Framework",
             "pattern": r"Next\.js",
         },
-
         "Phusion Passenger": {
             "category": "Backend",
             "pattern": r"Phusion Passenger",
         },
-
     },
-
     "Via": {
-
         "Heroku": {
             "category": "Hosting",
             "pattern": r"vegur",
         },
-
         "Varnish": {
             "category": "CDN",
             "pattern": r"varnish",
         },
-
     },
-
 }
 
 # ==========================================================
@@ -189,28 +158,23 @@ HEADER_SIGNATURES = {
 # ==========================================================
 
 PRESENCE_HEADER_SIGNATURES = {
-
     "CF-Ray": ("Cloudflare", "CDN"),
     "X-Amz-Cf-Id": ("Amazon CloudFront", "CDN"),
     "X-Akamai-Transformed": ("Akamai", "CDN"),
     "X-Fastly-Request-ID": ("Fastly", "CDN"),
     "X-Served-By": ("Fastly", "CDN"),
-
     "X-Vercel-Id": ("Vercel", "Hosting"),
     "X-Vercel-Cache": ("Vercel", "Hosting"),
     "X-Nf-Request-Id": ("Netlify", "Hosting"),
     "X-Github-Request-Id": ("GitHub Pages", "Hosting"),
-
     "X-Sucuri-ID": ("Sucuri", "WAF"),
     "X-Sucuri-Cache": ("Sucuri", "WAF"),
     "X-Iinfo": ("Imperva Incapsula", "WAF"),
     "X-Firewall-Protection": ("Generic Firewall", "WAF"),
-
     "Strict-Transport-Security": ("HSTS", "Security"),
     "Content-Security-Policy": ("Content Security Policy", "Security"),
     "X-Frame-Options": ("Clickjacking Protection", "Security"),
     "Permissions-Policy": ("Permissions Policy", "Security"),
-
 }
 
 # ==========================================================
@@ -220,69 +184,52 @@ PRESENCE_HEADER_SIGNATURES = {
 # ==========================================================
 
 REVERSE_PROXY_SIGNATURES = {
-
     "Server": {
-
         "Envoy": {
             "category": "Reverse Proxy",
             "pattern": r"envoy",
         },
-
         "HAProxy": {
             "category": "Reverse Proxy",
             "pattern": r"haproxy/?([\d\.]+)?",
         },
-
         "Traefik": {
             "category": "Reverse Proxy",
             "pattern": r"traefik/?([\d\.]+)?",
         },
-
         "Varnish": {
             "category": "Reverse Proxy",
             "pattern": r"varnish/?([\d\.]+)?",
         },
-
         "Squid": {
             "category": "Reverse Proxy",
             "pattern": r"squid/?([\d\.]+)?",
         },
-
         "Apache Traffic Server": {
             "category": "Reverse Proxy",
             "pattern": r"(?:ATS|ApacheTrafficServer)/?([\d\.]+)?",
         },
-
         "OpenResty": {
             "category": "Reverse Proxy",
             "pattern": r"openresty/?([\d\.]+)?",
         },
-
     },
-
     "Via": {
-
         "Varnish": {
             "category": "Reverse Proxy",
             "pattern": r"varnish",
         },
-
         "Squid": {
             "category": "Reverse Proxy",
             "pattern": r"squid",
         },
-
     },
-
     "X-Served-By": {
-
         "Varnish": {
             "category": "Reverse Proxy",
             "pattern": r".+",
         },
-
     },
-
 }
 
 # ==========================================================
@@ -290,113 +237,80 @@ REVERSE_PROXY_SIGNATURES = {
 # ==========================================================
 
 CDN_SIGNATURES = {
-
     "Server": {
-
         "Cloudflare": {
             "category": "CDN",
             "pattern": r"cloudflare",
         },
-
         "Akamai": {
             "category": "CDN",
             "pattern": r"akamai",
         },
-
         "Fastly": {
             "category": "CDN",
             "pattern": r"fastly",
         },
-
     },
-
     "Via": {
-
         "CloudFront": {
             "category": "CDN",
             "pattern": r"cloudfront",
         },
-
         "Fastly": {
             "category": "CDN",
             "pattern": r"fastly",
         },
-
         "Akamai": {
             "category": "CDN",
             "pattern": r"akamai",
         },
-
     },
-
     "X-Cache": {
-
         "CloudFront": {
             "category": "CDN",
             "pattern": r"cloudfront",
         },
-
         "Fastly": {
             "category": "CDN",
             "pattern": r"fastly",
         },
-
     },
-
     "CF-Ray": {
-
         "Cloudflare": {
             "category": "CDN",
             "pattern": r".+",
         },
-
     },
-
     "CF-Cache-Status": {
-
         "Cloudflare": {
             "category": "CDN",
             "pattern": r".+",
         },
-
     },
-
     "X-Amz-Cf-Id": {
-
         "Amazon CloudFront": {
             "category": "CDN",
             "pattern": r".+",
         },
-
     },
-
     "X-Akamai-Transformed": {
-
         "Akamai": {
             "category": "CDN",
             "pattern": r".+",
         },
-
     },
-
     "X-Fastly-Request-ID": {
-
         "Fastly": {
             "category": "CDN",
             "pattern": r".+",
         },
-
     },
-
     "X-Served-By": {
-
         "Fastly": {
             "category": "CDN",
             "pattern": r".*cache.*",
         },
-
     },
-
 }
 
 # ==========================================================
@@ -404,124 +318,90 @@ CDN_SIGNATURES = {
 # ==========================================================
 
 WAF_SIGNATURES = {
-
     "Server": {
-
         "Cloudflare": {
             "category": "WAF",
             "pattern": r"cloudflare",
         },
-
         "Sucuri": {
             "category": "WAF",
             "pattern": r"sucuri",
         },
-
         "Akamai": {
             "category": "WAF",
             "pattern": r"akamai",
         },
-
         "Imperva": {
             "category": "WAF",
             "pattern": r"imperva|incapsula",
         },
-
         "F5 BIG-IP": {
             "category": "WAF",
             "pattern": r"bigip|f5",
         },
-
         "FortiWeb": {
             "category": "WAF",
             "pattern": r"fortiweb",
         },
-
         "Barracuda": {
             "category": "WAF",
             "pattern": r"barracuda",
         },
-
         "Azure WAF": {
             "category": "WAF",
             "pattern": r"microsoft-azure-application-gateway",
         },
-
         "AWS WAF": {
             "category": "WAF",
             "pattern": r"awselb|aws",
         },
-
         "DDoS-Guard": {
             "category": "WAF",
             "pattern": r"ddos-guard",
         },
-
     },
-
     "X-CDN": {
-
         "Cloudflare": {
             "category": "WAF",
             "pattern": r"cloudflare",
         },
-
     },
-
     "X-Sucuri-ID": {
-
         "Sucuri": {
             "category": "WAF",
             "pattern": r".+",
         },
-
     },
-
     "X-Iinfo": {
-
         "Imperva": {
             "category": "WAF",
             "pattern": r".+",
         },
-
     },
-
     "X-Azure-Ref": {
-
         "Azure WAF": {
             "category": "WAF",
             "pattern": r".+",
         },
-
     },
-
     "CF-Ray": {
-
         "Cloudflare": {
             "category": "WAF",
             "pattern": r".+",
         },
-
     },
-
     "CF-Cache-Status": {
-
         "Cloudflare": {
             "category": "WAF",
             "pattern": r".+",
         },
-
     },
-
     "X-Firewall": {
-
         "Generic WAF": {
             "category": "WAF",
             "pattern": r".+",
         },
-
     },
-
 }
 
 # ==========================================================
@@ -529,423 +409,341 @@ WAF_SIGNATURES = {
 # ==========================================================
 
 CMS_SIGNATURES = {
-
     "Meta Generator": {
-
         "WordPress": {
             "category": "CMS",
             "pattern": r"wordpress\s*([0-9.]+)?",
         },
-
         "Joomla": {
             "category": "CMS",
             "pattern": r"joomla!?[\s/]?([0-9.]+)?",
         },
-
         "Drupal": {
             "category": "CMS",
             "pattern": r"drupal\s*([0-9.]+)?",
         },
-
         "Magento": {
             "category": "CMS",
             "pattern": r"magento\s*([0-9.]+)?",
         },
-
         "Ghost": {
             "category": "CMS",
             "pattern": r"ghost",
         },
-
         "Blogger": {
             "category": "CMS",
             "pattern": r"blogger",
         },
-
         "Wix": {
             "category": "CMS",
             "pattern": r"wix",
         },
-
         "Shopify": {
             "category": "CMS",
             "pattern": r"shopify",
         },
-
     },
-
     "X-Powered-By": {
-
         "ASP.NET": {
             "category": "Framework",
             "pattern": r"ASP\.NET",
         },
-
         "Laravel": {
             "category": "Framework",
             "pattern": r"Laravel",
         },
-
         "Express": {
             "category": "Framework",
             "pattern": r"Express",
         },
-
         "PHP": {
             "category": "Language",
             "pattern": r"PHP/?([0-9.]+)?",
         },
     },
-
     "HTML": {
-
-            "WordPress": {
-                "category": "CMS",
-                "pattern": r"wp-content|wp-includes|wp-json",
-            },
-
-            "Joomla": {
-                "category": "CMS",
-                "pattern": r"/media/system/|joomla!",
-            },
-
-            "Drupal": {
-                "category": "CMS",
-                "pattern": r"drupal-settings-json|sites/default/files|Drupal.settings",
-            },
-
-            "Magento": {
-                "category": "CMS",
-                "pattern": r"mage/cookies|Magento_Ui|static/version",
-            },
-
-            "Shopify": {
-                "category": "CMS",
-                "pattern": r"cdn\.shopify\.com|Shopify.theme|shopify-payment-button",
-            },
-
-            "Wix": {
-                "category": "CMS",
-                "pattern": r"static\.wixstatic\.com|wix-code-sdk|wix-image",
-            },
-
-            "Blogger": {
-                "category": "CMS",
-                "pattern": r"blogger.googleusercontent.com|blogger",
-            },
-
-            "Ghost": {
-                "category": "CMS",
-                "pattern": r"ghost-head|ghost-foot|ghost-content-api",
-            },
-
-            "Next.js": {
-                "category": "Framework",
-                "pattern": r"__NEXT_DATA__|_next/static|_next/image",
-            },
-
-            "Nuxt.js": {
-                "category": "Framework",
-                "pattern": r"__NUXT__|/_nuxt/",
-            },
-
-            "Laravel": {
-                "category": "Framework",
-                "pattern": r'laravel_session|csrf-token',
-            },
-
-            "Django": {
-                "category": "Framework",
-                "pattern": r'csrfmiddlewaretoken|__admin_media_prefix__',
-            },
-
-            "Flask": {
-                "category": "Framework",
-                "pattern": r'flask|Werkzeug',
-            },
-
-            "Express": {
-                "category": "Framework",
-                "pattern": r'express',
-            },
-
-            "ASP.NET": {
-                "category": "Framework",
-                "pattern": r'__VIEWSTATE|__EVENTVALIDATION|WebResource\.axd|ScriptResource\.axd',
-            },
+        "WordPress": {
+            "category": "CMS",
+            "pattern": r"wp-content|wp-includes|wp-json",
+        },
+        "Joomla": {
+            "category": "CMS",
+            "pattern": r"/media/system/|joomla!",
+        },
+        "Drupal": {
+            "category": "CMS",
+            "pattern":
+            r"drupal-settings-json|sites/default/files|Drupal.settings",
+        },
+        "Magento": {
+            "category": "CMS",
+            "pattern": r"mage/cookies|Magento_Ui|static/version",
+        },
+        "Shopify": {
+            "category": "CMS",
+            "pattern":
+            r"cdn\.shopify\.com|Shopify.theme|shopify-payment-button",
+        },
+        "Wix": {
+            "category": "CMS",
+            "pattern": r"static\.wixstatic\.com|wix-code-sdk|wix-image",
+        },
+        "Blogger": {
+            "category": "CMS",
+            "pattern": r"blogger.googleusercontent.com|blogger",
+        },
+        "Ghost": {
+            "category": "CMS",
+            "pattern": r"ghost-head|ghost-foot|ghost-content-api",
+        },
+        "Next.js": {
+            "category": "Framework",
+            "pattern": r"__NEXT_DATA__|_next/static|_next/image",
+        },
+        "Nuxt.js": {
+            "category": "Framework",
+            "pattern": r"__NUXT__|/_nuxt/",
+        },
+        "Laravel": {
+            "category": "Framework",
+            "pattern": r'laravel_session|csrf-token',
+        },
+        "Django": {
+            "category": "Framework",
+            "pattern": r'csrfmiddlewaretoken|__admin_media_prefix__',
+        },
+        "Flask": {
+            "category": "Framework",
+            "pattern": r'flask|Werkzeug',
+        },
+        "Express": {
+            "category": "Framework",
+            "pattern": r'express',
+        },
+        "ASP.NET": {
+            "category":
+            "Framework",
+            "pattern":
+            r'__VIEWSTATE|__EVENTVALIDATION|WebResource\.axd|ScriptResource\.axd',
+        },
     },
-
     "Script": {
-            "WordPress": {
-                "category": "CMS",
-                "pattern": r"/wp-content/|/wp-includes/",
-            },
-
-            "WooCommerce": {
-                "category": "Plugin",
-                "pattern": r"woocommerce",
-            },
-
-            "Elementor": {
-                "category": "Plugin",
-                "pattern": r"elementor",
-            },
-
-            "Joomla": {
-                "category": "CMS",
-                "pattern": r"/media/system/js/",
-            },
-
-            "Drupal": {
-                "category": "CMS",
-                "pattern": r"/sites/default/files/js/|drupal.js",
-            },
-
-            "Magento": {
-                "category": "CMS",
-                "pattern": r"/static/version|Magento_",
-            },
-
-            "Shopify": {
-                "category": "CMS",
-                "pattern": r"cdn.shopify.com|shopify",
-            },
-
-            "Wix": {
-                "category": "CMS",
-                "pattern": r"wixstatic.com",
-            },
-
-            "Ghost": {
-                "category": "CMS",
-                "pattern": r"ghost-sdk|ghost",
-            },
-
-            "Next.js": {
-                "category": "Framework",
-                "pattern": r"/_next/static/",
-            },
-
-            "Nuxt.js": {
-                "category": "Framework",
-                "pattern": r"/_nuxt/",
-            },
-
-            "React": {
-                "category": "Framework",
-                "pattern": r"react(\.min)?\.js|react-dom",
-            },
-
-            "Vue.js": {
-                "category": "Framework",
-                "pattern": r"vue(\.runtime)?(\.min)?\.js",
-            },
-
-            "Angular": {
-                "category": "Framework",
-                "pattern": r"angular(\.min)?\.js|zone\.js",
-            },
-
-            "Svelte": {
-                "category": "Framework",
-                "pattern": r"svelte",
-            },
-
-            "Ember.js": {
-                "category": "Framework",
-                "pattern": r"ember(\.min)?\.js",
-            },
-
-            "Backbone.js": {
-                "category": "Framework",
-                "pattern": r"backbone(\.min)?\.js",
-            },
-
-            "Alpine.js": {
-                "category": "Framework",
-                "pattern": r"alpine(\.min)?\.js",
-            },
-
-            "Preact": {
-                "category": "Framework",
-                "pattern": r"preact(\.min)?\.js",
-            },
-
+        "WordPress": {
+            "category": "CMS",
+            "pattern": r"/wp-content/|/wp-includes/",
+        },
+        "WooCommerce": {
+            "category": "Plugin",
+            "pattern": r"woocommerce",
+        },
+        "Elementor": {
+            "category": "Plugin",
+            "pattern": r"elementor",
+        },
+        "Joomla": {
+            "category": "CMS",
+            "pattern": r"/media/system/js/",
+        },
+        "Drupal": {
+            "category": "CMS",
+            "pattern": r"/sites/default/files/js/|drupal.js",
+        },
+        "Magento": {
+            "category": "CMS",
+            "pattern": r"/static/version|Magento_",
+        },
+        "Shopify": {
+            "category": "CMS",
+            "pattern": r"cdn.shopify.com|shopify",
+        },
+        "Wix": {
+            "category": "CMS",
+            "pattern": r"wixstatic.com",
+        },
+        "Ghost": {
+            "category": "CMS",
+            "pattern": r"ghost-sdk|ghost",
+        },
+        "Next.js": {
+            "category": "Framework",
+            "pattern": r"/_next/static/",
+        },
+        "Nuxt.js": {
+            "category": "Framework",
+            "pattern": r"/_nuxt/",
+        },
+        "React": {
+            "category": "Framework",
+            "pattern": r"react(\.min)?\.js|react-dom",
+        },
+        "Vue.js": {
+            "category": "Framework",
+            "pattern": r"vue(\.runtime)?(\.min)?\.js",
+        },
+        "Angular": {
+            "category": "Framework",
+            "pattern": r"angular(\.min)?\.js|zone\.js",
+        },
+        "Svelte": {
+            "category": "Framework",
+            "pattern": r"svelte",
+        },
+        "Ember.js": {
+            "category": "Framework",
+            "pattern": r"ember(\.min)?\.js",
+        },
+        "Backbone.js": {
+            "category": "Framework",
+            "pattern": r"backbone(\.min)?\.js",
+        },
+        "Alpine.js": {
+            "category": "Framework",
+            "pattern": r"alpine(\.min)?\.js",
+        },
+        "Preact": {
+            "category": "Framework",
+            "pattern": r"preact(\.min)?\.js",
+        },
     },
-
     "Cookie": {
-
-            "WordPress": {
-                "category": "CMS",
-                "pattern": r"wordpress_|wp-settings-|wp-postpass_",
-            },
-
-            "WooCommerce": {
-                "category": "Plugin",
-                "pattern": r"woocommerce_|woocommerce_items_in_cart|wp_woocommerce_session_",
-            },
-
-            "Joomla": {
-                "category": "CMS",
-                "pattern": r"[a-f0-9]{32}",
-            },
-
-            "Drupal": {
-                "category": "CMS",
-                "pattern": r"SESS[a-zA-Z0-9]+",
-            },
-
-            "Magento": {
-                "category": "CMS",
-                "pattern": r"PHPSESSID|form_key|mage-cache",
-            },
-
-            "Shopify": {
-                "category": "CMS",
-                "pattern": r"_shopify|cart_sig|cart_currency|secure_customer_sig",
-            },
-
-            "Ghost": {
-                "category": "CMS",
-                "pattern": r"ghost-admin-api-session",
-            },
-
-            "Laravel": {
-                "category": "Framework",
-                "pattern": r"laravel_session|XSRF-TOKEN",
-            },
-
-            "Django": {
-                "category": "Framework",
-                "pattern": r"csrftoken|sessionid",
-            },
-
-            "Flask": {
-                "category": "Framework",
-                "pattern": r"session=",
-            },
-
-            "Express": {
-                "category": "Framework",
-                "pattern": r"connect.sid",
-            },
-
-            "ASP.NET": {
-                "category": "Framework",
-                "pattern": r"ASP\.NET_SessionId|__RequestVerificationToken",
-            },
-
-            "NextAuth": {
-                "category": "Authentication",
-                "pattern": r"next-auth",
-            },
-
-            "Supabase": {
-                "category": "Backend",
-                "pattern": r"sb-[a-z0-9]+-auth-token",
-            },
-
-            "Firebase": {
-                "category": "Backend",
-                "pattern": r"firebase",
-            },
-
-            "Auth0": {
-                "category": "Authentication",
-                "pattern": r"auth0",
-            },
-
-            "Keycloak": {
-                "category": "Authentication",
-                "pattern": r"KEYCLOAK_",
-            },
-
-            "Cloudflare": {
-                "category": "CDN",
-                "pattern": r"__cf_bm|cf_clearance|__cflb",
-            },
-
+        "WordPress": {
+            "category": "CMS",
+            "pattern": r"wordpress_|wp-settings-|wp-postpass_",
+        },
+        "WooCommerce": {
+            "category":
+            "Plugin",
+            "pattern":
+            r"woocommerce_|woocommerce_items_in_cart|wp_woocommerce_session_",
+        },
+        "Joomla": {
+            "category": "CMS",
+            "pattern": r"[a-f0-9]{32}",
+        },
+        "Drupal": {
+            "category": "CMS",
+            "pattern": r"SESS[a-zA-Z0-9]+",
+        },
+        "Magento": {
+            "category": "CMS",
+            "pattern": r"PHPSESSID|form_key|mage-cache",
+        },
+        "Shopify": {
+            "category": "CMS",
+            "pattern": r"_shopify|cart_sig|cart_currency|secure_customer_sig",
+        },
+        "Ghost": {
+            "category": "CMS",
+            "pattern": r"ghost-admin-api-session",
+        },
+        "Laravel": {
+            "category": "Framework",
+            "pattern": r"laravel_session|XSRF-TOKEN",
+        },
+        "Django": {
+            "category": "Framework",
+            "pattern": r"csrftoken|sessionid",
+        },
+        "Flask": {
+            "category": "Framework",
+            "pattern": r"session=",
+        },
+        "Express": {
+            "category": "Framework",
+            "pattern": r"connect.sid",
+        },
+        "ASP.NET": {
+            "category": "Framework",
+            "pattern": r"ASP\.NET_SessionId|__RequestVerificationToken",
+        },
+        "NextAuth": {
+            "category": "Authentication",
+            "pattern": r"next-auth",
+        },
+        "Supabase": {
+            "category": "Backend",
+            "pattern": r"sb-[a-z0-9]+-auth-token",
+        },
+        "Firebase": {
+            "category": "Backend",
+            "pattern": r"firebase",
+        },
+        "Auth0": {
+            "category": "Authentication",
+            "pattern": r"auth0",
+        },
+        "Keycloak": {
+            "category": "Authentication",
+            "pattern": r"KEYCLOAK_",
+        },
+        "Cloudflare": {
+            "category": "CDN",
+            "pattern": r"__cf_bm|cf_clearance|__cflb",
+        },
     },
-
     "Header": {
-
-            "WordPress": {
-                "category": "CMS",
-                "header": "Link",
-                "pattern": r"/wp-json/?",
-            },
-
-            "WordPress REST API": {
-                "category": "CMS",
-                "header": "X-Pingback",
-                "pattern": r".+",
-            },
-
-            "Drupal": {
-                "category": "CMS",
-                "header": "X-Generator",
-                "pattern": r"Drupal",
-            },
-
-            "Laravel": {
-                "category": "Framework",
-                "header": "Set-Cookie",
-                "pattern": r"laravel_session",
-            },
-
-            "Django": {
-                "category": "Framework",
-                "header": "Set-Cookie",
-                "pattern": r"csrftoken|sessionid",
-            },
-
-            "Flask": {
-                "category": "Framework",
-                "header": "Server",
-                "pattern": r"Werkzeug",
-            },
-
-            "Express": {
-                "category": "Framework",
-                "header": "X-Powered-By",
-                "pattern": r"Express",
-            },
-
-            "ASP.NET": {
-                "category": "Framework",
-                "header": "X-Powered-By",
-                "pattern": r"ASP\.NET",
-            },
-
-            "Next.js": {
-                "category": "Framework",
-                "header": "X-Powered-By",
-                "pattern": r"Next\.js",
-            },
-
-            "Nuxt.js": {
-                "category": "Framework",
-                "header": "X-Powered-By",
-                "pattern": r"Nuxt",
-            },
-
-            "Ghost": {
-                "category": "CMS",
-                "header": "X-Ghost-Cache",
-                "pattern": r".+",
-            },
-
-            "Shopify": {
-                "category": "CMS",
-                "header": "X-ShopId",
-                "pattern": r".+",
-            },
-
+        "WordPress": {
+            "category": "CMS",
+            "header": "Link",
+            "pattern": r"/wp-json/?",
+        },
+        "WordPress REST API": {
+            "category": "CMS",
+            "header": "X-Pingback",
+            "pattern": r".+",
+        },
+        "Drupal": {
+            "category": "CMS",
+            "header": "X-Generator",
+            "pattern": r"Drupal",
+        },
+        "Laravel": {
+            "category": "Framework",
+            "header": "Set-Cookie",
+            "pattern": r"laravel_session",
+        },
+        "Django": {
+            "category": "Framework",
+            "header": "Set-Cookie",
+            "pattern": r"csrftoken|sessionid",
+        },
+        "Flask": {
+            "category": "Framework",
+            "header": "Server",
+            "pattern": r"Werkzeug",
+        },
+        "Express": {
+            "category": "Framework",
+            "header": "X-Powered-By",
+            "pattern": r"Express",
+        },
+        "ASP.NET": {
+            "category": "Framework",
+            "header": "X-Powered-By",
+            "pattern": r"ASP\.NET",
+        },
+        "Next.js": {
+            "category": "Framework",
+            "header": "X-Powered-By",
+            "pattern": r"Next\.js",
+        },
+        "Nuxt.js": {
+            "category": "Framework",
+            "header": "X-Powered-By",
+            "pattern": r"Nuxt",
+        },
+        "Ghost": {
+            "category": "CMS",
+            "header": "X-Ghost-Cache",
+            "pattern": r".+",
+        },
+        "Shopify": {
+            "category": "CMS",
+            "header": "X-ShopId",
+            "pattern": r".+",
+        },
     },
-
-
-    }
-
+}
 
 # ==========================================================
 # Cookie Prefix Signatures — matched against the start of any
@@ -954,14 +752,12 @@ CMS_SIGNATURES = {
 # ==========================================================
 
 COOKIE_PREFIX_SIGNATURES = [
-
     ("BIGipServer", "F5 BIG-IP", "WAF"),
     ("incap_ses_", "Imperva Incapsula", "WAF"),
     ("visid_incap_", "Imperva Incapsula", "WAF"),
     ("__cfruid", "Cloudflare", "CDN"),
     ("_gcl_", "Google Ads", "Ads"),
     ("_fbp", "Meta Pixel", "Ads"),
-
 ]
 
 # ==========================================================
@@ -970,7 +766,6 @@ COOKIE_PREFIX_SIGNATURES = [
 # ==========================================================
 
 HTML_SIGNATURES = {
-
     "WordPress": {
         "category": "CMS",
         "patterns": [
@@ -979,7 +774,6 @@ HTML_SIGNATURES = {
             "wp-json",
         ],
     },
-
     "Drupal": {
         "category": "CMS",
         "patterns": [
@@ -987,7 +781,6 @@ HTML_SIGNATURES = {
             "Drupal.settings",
         ],
     },
-
     "Joomla": {
         "category": "CMS",
         "patterns": [
@@ -995,7 +788,6 @@ HTML_SIGNATURES = {
             "/media/system/",
         ],
     },
-
     "Wix": {
         "category": "CMS",
         "patterns": [
@@ -1003,7 +795,6 @@ HTML_SIGNATURES = {
             "wix.com",
         ],
     },
-
     "Squarespace": {
         "category": "CMS",
         "patterns": [
@@ -1011,7 +802,6 @@ HTML_SIGNATURES = {
             "static1.squarespace.com",
         ],
     },
-
     "Shopify": {
         "category": "CMS",
         "patterns": [
@@ -1019,7 +809,6 @@ HTML_SIGNATURES = {
             "Shopify.theme",
         ],
     },
-
     "Magento": {
         "category": "CMS",
         "patterns": [
@@ -1027,7 +816,6 @@ HTML_SIGNATURES = {
             "/skin/frontend/",
         ],
     },
-
     "Ghost": {
         "category": "CMS",
         "patterns": [
@@ -1035,7 +823,6 @@ HTML_SIGNATURES = {
             "ghost-url",
         ],
     },
-
     "TYPO3": {
         "category": "CMS",
         "patterns": [
@@ -1043,7 +830,6 @@ HTML_SIGNATURES = {
             "typo3temp",
         ],
     },
-
     "Webflow": {
         "category": "CMS",
         "patterns": [
@@ -1051,14 +837,12 @@ HTML_SIGNATURES = {
             "data-wf-page",
         ],
     },
-
     "PrestaShop": {
         "category": "CMS",
         "patterns": [
             "prestashop",
         ],
     },
-
     "OpenCart": {
         "category": "CMS",
         "patterns": [
@@ -1066,26 +850,18 @@ HTML_SIGNATURES = {
             "route=product",
         ],
     },
-
     "Blogger": {
-        "category": "CMS",
+        "category":
+        "CMS",
         "patterns": [
-
             "blogger.googleusercontent.com",
-
             "blogger.com/static",
-
             "data:blog",
-
             "expr:widget",
-
             "b:section",
-
             "b:widget",
-
         ],
     },
-
     "Laravel": {
         "category": "Backend",
         "patterns": [
@@ -1093,7 +869,6 @@ HTML_SIGNATURES = {
             "laravel",
         ],
     },
-
     "Django": {
         "category": "Backend",
         "patterns": [
@@ -1101,7 +876,6 @@ HTML_SIGNATURES = {
             "__admin_media_prefix__",
         ],
     },
-
     "Ruby on Rails": {
         "category": "Backend",
         "patterns": [
@@ -1109,21 +883,18 @@ HTML_SIGNATURES = {
             "authenticity_token",
         ],
     },
-
     "Symfony": {
         "category": "Backend",
         "patterns": [
             "symfony",
         ],
     },
-
     "CodeIgniter": {
         "category": "Backend",
         "patterns": [
             "codeigniter",
         ],
     },
-
     "ASP.NET": {
         "category": "Backend",
         "patterns": [
@@ -1131,7 +902,6 @@ HTML_SIGNATURES = {
             "__EVENTVALIDATION",
         ],
     },
-
     "React": {
         "category": "Frontend Framework",
         "patterns": [
@@ -1139,7 +909,6 @@ HTML_SIGNATURES = {
             "__REACT_DEVTOOLS",
         ],
     },
-
     "Next.js": {
         "category": "Frontend Framework",
         "patterns": [
@@ -1147,7 +916,6 @@ HTML_SIGNATURES = {
             "_next/static",
         ],
     },
-
     "Nuxt.js": {
         "category": "Frontend Framework",
         "patterns": [
@@ -1155,7 +923,6 @@ HTML_SIGNATURES = {
             "_nuxt/",
         ],
     },
-
     "Vue.js": {
         "category": "Frontend Framework",
         "patterns": [
@@ -1163,7 +930,6 @@ HTML_SIGNATURES = {
             "vue.js",
         ],
     },
-
     "Angular": {
         "category": "Frontend Framework",
         "patterns": [
@@ -1171,21 +937,18 @@ HTML_SIGNATURES = {
             "ng-app",
         ],
     },
-
     "Svelte": {
         "category": "Frontend Framework",
         "patterns": [
             "svelte-",
         ],
     },
-
     "Gatsby": {
         "category": "Frontend Framework",
         "patterns": [
             "___gatsby",
         ],
     },
-
     "Ember.js": {
         "category": "Frontend Framework",
         "patterns": [
@@ -1193,14 +956,12 @@ HTML_SIGNATURES = {
             "data-ember-action",
         ],
     },
-
     "Alpine.js": {
         "category": "Frontend Framework",
         "patterns": [
             "x-data=",
         ],
     },
-
 }
 
 # ==========================================================
@@ -1209,37 +970,21 @@ HTML_SIGNATURES = {
 # ==========================================================
 
 COOKIE_SIGNATURES = {
-
     "PHPSESSID": ("PHP", "Backend"),
-
     "JSESSIONID": ("Java", "Backend"),
-
     "ASP.NET_SessionId": ("ASP.NET", "Backend"),
-
     "laravel_session": ("Laravel", "Backend"),
-
     "django_language": ("Django", "Backend"),
-
     "csrftoken": ("Django", "Backend"),
-
     "wordpress_logged_in": ("WordPress", "CMS"),
-
     "wp-settings-time": ("WordPress", "CMS"),
-
     "XSRF-TOKEN": ("Laravel", "Backend"),
-
     "_ga": ("Google Analytics", "Analytics"),
-
     "_gid": ("Google Analytics", "Analytics"),
-
     "_hjSessionUser": ("Hotjar", "Analytics"),
-
     "mp_mixpanel": ("Mixpanel", "Analytics"),
-
     "__cf_bm": ("Cloudflare", "CDN"),
-
     "__cfduid": ("Cloudflare", "CDN"),
-
 }
 
 # ==========================================================
@@ -1334,10 +1079,10 @@ SCRIPT_SIGNATURES = {
     # --- Security ---
     "recaptcha": ("Google reCAPTCHA", "Security"),
     "hcaptcha.com": ("hCaptcha", "Security"),
-    "challenges.cloudflare.com/turnstile": ("Cloudflare Turnstile", "Security"),
+    "challenges.cloudflare.com/turnstile":
+    ("Cloudflare Turnstile", "Security"),
     "cookielaw.org": ("OneTrust", "Security"),
     "onetrust": ("OneTrust", "Security"),
-
 }
 
 # ==========================================================
@@ -1346,7 +1091,6 @@ SCRIPT_SIGNATURES = {
 # ==========================================================
 
 LINK_SIGNATURES = {
-
     "fonts.googleapis.com": ("Google Fonts", "Fonts"),
     "fonts.gstatic.com": ("Google Fonts", "Fonts"),
     "use.typekit.net": ("Adobe Fonts (Typekit)", "Fonts"),
@@ -1354,15 +1098,12 @@ LINK_SIGNATURES = {
     "fast.fonts.net": ("Fonts.com (Monotype)", "Fonts"),
     "cloud.typography.com": ("Hoefler&Co", "Fonts"),
     "use.fontawesome.com": ("Font Awesome", "Fonts"),
-
     "cdnjs.cloudflare.com": ("cdnjs (Cloudflare)", "CDN"),
     "cdn.jsdelivr.net": ("jsDelivr", "CDN"),
     "unpkg.com": ("unpkg", "CDN"),
-
     "bootstrap": ("Bootstrap", "CSS Framework"),
     "bulma": ("Bulma", "CSS Framework"),
     "materialize": ("Materialize CSS", "CSS Framework"),
-
 }
 
 # ==========================================================
@@ -1401,7 +1142,6 @@ INLINE_JS_SIGNATURES = {
 
     # Video
     "YT.Player": ("YouTube", "Video Player"),
-
 }
 
 # ==========================================================
@@ -1409,22 +1149,16 @@ INLINE_JS_SIGNATURES = {
 # ==========================================================
 
 DOM_ATTRIBUTE_SIGNATURES = {
-
     "ng-app": ("Angular", "Frontend Framework"),
     "ng-version": ("Angular", "Frontend Framework"),
-
     "x-data": ("Alpine.js", "Frontend Framework"),
     "x-show": ("Alpine.js", "Frontend Framework"),
-
     "wire:id": ("Livewire", "Frontend Framework"),
     "wire:model": ("Livewire", "Frontend Framework"),
-
     "hx-get": ("HTMX", "Frontend Framework"),
     "hx-post": ("HTMX", "Frontend Framework"),
-
     "data-bs-toggle": ("Bootstrap", "CSS Framework"),
     "data-toggle": ("Bootstrap", "CSS Framework"),
-
     "data-aos": ("AOS", "JS Library"),
     "data-fancybox": ("FancyBox", "JS Library"),
 }
@@ -1470,52 +1204,41 @@ URL_SIGNATURES = {
     # Security
     "recaptcha": ("Google reCAPTCHA", "Security"),
     "hcaptcha.com": ("hCaptcha", "Security"),
-
 }
-
 
 # ==========================================================
 # Technology Version Patterns
 # ==========================================================
 
 TECH_VERSION_PATTERNS = {
-
     "jQuery": [
         r"jquery[-.]([\d.]+)",
         r"jquery\.min\.js\?v=([\d.]+)",
     ],
-
     "Bootstrap": [
         r"bootstrap[-.]([\d.]+)",
         r"bootstrap@([\d.]+)",
     ],
-
     "Font Awesome": [
         r"fontawesome[-.]([\d.]+)",
         r"font-awesome[-.]([\d.]+)",
     ],
-
     "Swiper.js": [
         r"swiper[-.]([\d.]+)",
     ],
-
     "OWL Carousel": [
         r"owl(?:\.|-)carousel[-.]([\d.]+)",
     ],
 }
 
 FORM_SIGNATURES = {
-
     "__VIEWSTATE": ("ASP.NET", "Backend"),
     "__EVENTVALIDATION": ("ASP.NET", "Backend"),
-
     "csrfmiddlewaretoken": ("Django", "Backend"),
     "authenticity_token": ("Ruby on Rails", "Backend"),
     "_token": ("Laravel", "Backend"),
-
     "g-recaptcha-response": ("Google reCAPTCHA", "Security"),
     "h-captcha-response": ("hCaptcha", "Security"),
-
     "cf-turnstile-response": ("Cloudflare Turnstile", "Security"),
 }
 
@@ -1524,7 +1247,6 @@ FORM_SIGNATURES = {
 # ==========================================================
 
 OS_SIGNATURES = {
-
     "Ubuntu": {
         "category": "Operating System",
         "headers": [
@@ -1535,7 +1257,6 @@ OS_SIGNATURES = {
             "ubuntu logo",
         ],
     },
-
     "Debian": {
         "category": "Operating System",
         "headers": [
@@ -1543,7 +1264,6 @@ OS_SIGNATURES = {
         ],
         "html": [],
     },
-
     "CentOS": {
         "category": "Operating System",
         "headers": [
@@ -1551,7 +1271,6 @@ OS_SIGNATURES = {
         ],
         "html": [],
     },
-
     "Rocky Linux": {
         "category": "Operating System",
         "headers": [
@@ -1559,7 +1278,6 @@ OS_SIGNATURES = {
         ],
         "html": [],
     },
-
     "AlmaLinux": {
         "category": "Operating System",
         "headers": [
@@ -1567,7 +1285,6 @@ OS_SIGNATURES = {
         ],
         "html": [],
     },
-
     "Fedora": {
         "category": "Operating System",
         "headers": [
@@ -1575,7 +1292,6 @@ OS_SIGNATURES = {
         ],
         "html": [],
     },
-
     "Alpine Linux": {
         "category": "Operating System",
         "headers": [
@@ -1583,7 +1299,6 @@ OS_SIGNATURES = {
         ],
         "html": [],
     },
-
     "FreeBSD": {
         "category": "Operating System",
         "headers": [
@@ -1591,7 +1306,6 @@ OS_SIGNATURES = {
         ],
         "html": [],
     },
-
     "OpenBSD": {
         "category": "Operating System",
         "headers": [
@@ -1599,7 +1313,6 @@ OS_SIGNATURES = {
         ],
         "html": [],
     },
-
     "Windows Server": {
         "category": "Operating System",
         "headers": [
@@ -1618,85 +1331,66 @@ OS_SIGNATURES = {
 
 # ---------- Runtimes / Web servers / Hosting (Server header) ----------
 EXTRA_HEADER_SIGNATURES = {
-
     "Server": {
-
         "Node.js": {
             "category": "Backend",
             "pattern": r"Node\.js/?([\d\.]+)?",
         },
-
         "Deno": {
             "category": "Backend",
             "pattern": r"Deno/?([\d\.]+)?",
         },
-
         "Bun": {
             "category": "Backend",
             "pattern": r"\bBun\b",
         },
-
         "Puma": {
             "category": "Web Server",
             "pattern": r"Puma/?([\d\.]+)?",
         },
-
         "Unicorn": {
             "category": "Web Server",
             "pattern": r"[Uu]nicorn/?([\d\.]+)?",
         },
-
         "Phusion Passenger": {
             "category": "Backend",
             "pattern": r"Phusion[_ ]Passenger/?([\d\.]+)?",
         },
-
         "GitHub.com": {
             "category": "Hosting",
             "pattern": r"GitHub\.com",
         },
-
         "Vercel": {
             "category": "Hosting",
             "pattern": r"Vercel",
         },
-
         "Netlify": {
             "category": "Hosting",
             "pattern": r"Netlify",
         },
-
     },
-
     "X-Powered-By": {
-
         "Fastify": {
             "category": "Backend",
             "pattern": r"Fastify",
         },
-
         "NestJS": {
             "category": "Backend",
             "pattern": r"NestJS",
         },
-
         "Umbraco": {
             "category": "CMS",
             "pattern": r"Umbraco",
         },
-
         "AWS Lambda": {
             "category": "Backend",
             "pattern": r"AWS Lambda",
         },
-
     },
-
 }
 
 # ---------- Presence-only headers: caching, security, tracing, WAF ----------
 EXTRA_PRESENCE_HEADER_SIGNATURES = {
-
     "X-Drupal-Cache": ("Drupal", "CMS"),
     "X-Drupal-Dynamic-Cache": ("Drupal", "CMS"),
     "X-Varnish": ("Varnish", "Reverse Proxy"),
@@ -1710,202 +1404,308 @@ EXTRA_PRESENCE_HEADER_SIGNATURES = {
     "X-Cacheable": ("WP Engine", "Hosting"),
     "X-Redirect-By": ("WordPress", "CMS"),
     "X-Pingback": ("WordPress", "CMS"),
-
     "X-Content-Type-Options": ("X-Content-Type-Options", "Security"),
     "X-XSS-Protection": ("X-XSS-Protection", "Security"),
     "Referrer-Policy": ("Referrer-Policy", "Security"),
     "Cross-Origin-Opener-Policy": ("Cross-Origin-Opener-Policy", "Security"),
-    "Cross-Origin-Resource-Policy": ("Cross-Origin-Resource-Policy", "Security"),
-    "Cross-Origin-Embedder-Policy": ("Cross-Origin-Embedder-Policy", "Security"),
+    "Cross-Origin-Resource-Policy":
+    ("Cross-Origin-Resource-Policy", "Security"),
+    "Cross-Origin-Embedder-Policy":
+    ("Cross-Origin-Embedder-Policy", "Security"),
     "Expect-CT": ("Expect-CT", "Security"),
     "NEL": ("Network Error Logging", "Security"),
     "Report-To": ("Reporting API", "Security"),
-
     "Server-Timing": ("Server-Timing API", "Observability"),
     "X-B3-TraceId": ("Zipkin / B3 Tracing", "Observability"),
     "traceparent": ("W3C Trace Context", "Observability"),
-
     "X-Datadome": ("DataDome", "WAF"),
     "X-Distil-Cs": ("Distil Networks (Imperva)", "WAF"),
     "X-SigSci-Tags": ("Signal Sciences", "WAF"),
-
     "X-Amz-Cf-Pop": ("Amazon CloudFront", "CDN"),
     "X-Now-Trace": ("Vercel", "Hosting"),
-
 }
 
 # ---------- Reverse proxies / API gateways ----------
 EXTRA_REVERSE_PROXY_SIGNATURES = {
-
     "Server": {
-
         "Kong": {
             "category": "Reverse Proxy",
             "pattern": r"kong/?([\d\.]+)?",
         },
-
         "Tyk": {
             "category": "Reverse Proxy",
             "pattern": r"tyk",
         },
-
         "Zuul": {
             "category": "Reverse Proxy",
             "pattern": r"zuul",
         },
-
         "Apache APISIX": {
             "category": "Reverse Proxy",
             "pattern": r"APISIX",
         },
-
         "Pomerium": {
             "category": "Reverse Proxy",
             "pattern": r"pomerium",
         },
-
     },
-
 }
 
 # ---------- CDN providers ----------
 EXTRA_CDN_SIGNATURES = {
-
     "Server": {
-
         "BunnyCDN": {
             "category": "CDN",
             "pattern": r"bunnycdn",
         },
-
         "KeyCDN": {
             "category": "CDN",
             "pattern": r"keycdn",
         },
-
         "StackPath": {
             "category": "CDN",
             "pattern": r"stackpath",
         },
-
         "G-Core": {
             "category": "CDN",
             "pattern": r"gcorelabs|g-core",
         },
-
         "CacheFly": {
             "category": "CDN",
             "pattern": r"cachefly",
         },
-
         "Tencent Cloud CDN": {
             "category": "CDN",
             "pattern": r"tencent",
         },
-
         "Alibaba Cloud CDN": {
             "category": "CDN",
             "pattern": r"alicloud|alikunlun",
         },
-
     },
-
     "X-Edge-Location": {
-
         "Generic Edge CDN": {
             "category": "CDN",
             "pattern": r".+",
         },
-
     },
-
 }
 
 # ---------- WAF vendors ----------
 EXTRA_WAF_SIGNATURES = {
-
     "Server": {
-
         "Radware": {
             "category": "WAF",
             "pattern": r"radware",
         },
-
         "Reblaze": {
             "category": "WAF",
             "pattern": r"reblaze",
         },
-
         "Wallarm": {
             "category": "WAF",
             "pattern": r"wallarm",
         },
-
     },
-
 }
 
 # ---------- CMS / static-site-generator meta generators ----------
 EXTRA_CMS_META_GENERATOR = {
-
-    "Squarespace": {"category": "CMS", "pattern": r"squarespace"},
-    "Webflow": {"category": "CMS", "pattern": r"webflow"},
-    "TYPO3": {"category": "CMS", "pattern": r"typo3"},
-    "Hugo": {"category": "Static Site Generator", "pattern": r"hugo\s*([0-9.]+)?"},
-    "Jekyll": {"category": "Static Site Generator", "pattern": r"jekyll\s*([0-9.]+)?"},
-    "Gatsby": {"category": "Static Site Generator", "pattern": r"gatsby"},
-    "Eleventy": {"category": "Static Site Generator", "pattern": r"eleventy|11ty"},
-    "PrestaShop": {"category": "CMS", "pattern": r"prestashop\s*([0-9.]+)?"},
-    "OpenCart": {"category": "CMS", "pattern": r"opencart\s*([0-9.]+)?"},
-    "BigCommerce": {"category": "CMS", "pattern": r"bigcommerce"},
-    "Craft CMS": {"category": "CMS", "pattern": r"craft\s*cms\s*([0-9.]+)?"},
-    "Kirby": {"category": "CMS", "pattern": r"kirby\s*([0-9.]+)?"},
-    "concrete5": {"category": "CMS", "pattern": r"concrete5|concretecms\s*([0-9.]+)?"},
-    "Umbraco": {"category": "CMS", "pattern": r"umbraco\s*([0-9.]+)?"},
-    "SharePoint": {"category": "CMS", "pattern": r"sharepoint\s*([0-9.]+)?"},
-    "Wagtail": {"category": "CMS", "pattern": r"wagtail\s*([0-9.]+)?"},
-    "Statamic": {"category": "CMS", "pattern": r"statamic\s*([0-9.]+)?"},
-
+    "Squarespace": {
+        "category": "CMS",
+        "pattern": r"squarespace"
+    },
+    "Webflow": {
+        "category": "CMS",
+        "pattern": r"webflow"
+    },
+    "TYPO3": {
+        "category": "CMS",
+        "pattern": r"typo3"
+    },
+    "Hugo": {
+        "category": "Static Site Generator",
+        "pattern": r"hugo\s*([0-9.]+)?"
+    },
+    "Jekyll": {
+        "category": "Static Site Generator",
+        "pattern": r"jekyll\s*([0-9.]+)?"
+    },
+    "Gatsby": {
+        "category": "Static Site Generator",
+        "pattern": r"gatsby"
+    },
+    "Eleventy": {
+        "category": "Static Site Generator",
+        "pattern": r"eleventy|11ty"
+    },
+    "PrestaShop": {
+        "category": "CMS",
+        "pattern": r"prestashop\s*([0-9.]+)?"
+    },
+    "OpenCart": {
+        "category": "CMS",
+        "pattern": r"opencart\s*([0-9.]+)?"
+    },
+    "BigCommerce": {
+        "category": "CMS",
+        "pattern": r"bigcommerce"
+    },
+    "Craft CMS": {
+        "category": "CMS",
+        "pattern": r"craft\s*cms\s*([0-9.]+)?"
+    },
+    "Kirby": {
+        "category": "CMS",
+        "pattern": r"kirby\s*([0-9.]+)?"
+    },
+    "concrete5": {
+        "category": "CMS",
+        "pattern": r"concrete5|concretecms\s*([0-9.]+)?"
+    },
+    "Umbraco": {
+        "category": "CMS",
+        "pattern": r"umbraco\s*([0-9.]+)?"
+    },
+    "SharePoint": {
+        "category": "CMS",
+        "pattern": r"sharepoint\s*([0-9.]+)?"
+    },
+    "Wagtail": {
+        "category": "CMS",
+        "pattern": r"wagtail\s*([0-9.]+)?"
+    },
+    "Statamic": {
+        "category": "CMS",
+        "pattern": r"statamic\s*([0-9.]+)?"
+    },
 }
 
 # ---------- SaaS widgets, headless CMS, observability, build tools ----------
 EXTRA_HTML_SIGNATURES = {
-
-    "Sentry": {"category": "Error Tracking", "patterns": ["sentry.io", "sentry-trace"]},
-    "New Relic": {"category": "Observability", "patterns": ["newrelic.com", "nr-data.net"]},
-    "Segment": {"category": "Analytics", "patterns": ["cdn.segment.com", "segment.io"]},
-    "HubSpot": {"category": "Marketing", "patterns": ["hs-scripts.com", "hsforms.net"]},
-    "Intercom": {"category": "Customer Support", "patterns": ["widget.intercom.io", "intercomcdn.com"]},
-    "Zendesk": {"category": "Customer Support", "patterns": ["zdassets.com", "zendesk.com"]},
-    "Crisp": {"category": "Customer Support", "patterns": ["client.crisp.chat"]},
-    "Tawk.to": {"category": "Customer Support", "patterns": ["embed.tawk.to"]},
-    "Drift": {"category": "Customer Support", "patterns": ["js.driftt.com"]},
-    "Freshchat": {"category": "Customer Support", "patterns": ["wchat.freshchat.com"]},
-    "LiveChat": {"category": "Customer Support", "patterns": ["cdn.livechatinc.com"]},
-    "Optimizely": {"category": "A/B Testing", "patterns": ["cdn.optimizely.com"]},
-    "VWO": {"category": "A/B Testing", "patterns": ["dev.visualwebsiteoptimizer.com"]},
-    "Google Optimize": {"category": "A/B Testing", "patterns": ["googleoptimize.com"]},
-    "Cloudinary": {"category": "Media/CDN", "patterns": ["res.cloudinary.com"]},
-    "imgix": {"category": "Media/CDN", "patterns": [".imgix.net"]},
-    "Contentful": {"category": "Headless CMS", "patterns": ["cdn.contentful.com", "images.ctfassets.net"]},
-    "Sanity": {"category": "Headless CMS", "patterns": ["cdn.sanity.io"]},
-    "Strapi": {"category": "Headless CMS", "patterns": ["strapi.io"]},
-    "Prismic": {"category": "Headless CMS", "patterns": ["prismic.io"]},
-    "Storyblok": {"category": "Headless CMS", "patterns": ["storyblok.com"]},
-    "Apollo Client": {"category": "API", "patterns": ["apollo-client", "__APOLLO_STATE__"]},
-    "Webpack": {"category": "Build Tool", "patterns": ["webpackjsonp", "__webpack_require__"]},
-    "Vite": {"category": "Build Tool", "patterns": ["/@vite/client"]},
-    "Parcel": {"category": "Build Tool", "patterns": ["parcelrequire"]},
-    "Redux": {"category": "State Management", "patterns": ["__REDUX_DEVTOOLS_EXTENSION__"]},
-    "Firebase": {"category": "Backend", "patterns": ["firebaseio.com", "firebaseapp.com"]},
-    "Supabase": {"category": "Backend", "patterns": ["supabase.co", "supabase.in"]},
-    "Google reCAPTCHA v3": {"category": "Security", "patterns": ["recaptcha/api.js?render="]},
-    "Algolia Search": {"category": "Search", "patterns": ["algolia.net", "algolianet.com"]},
-
+    "Sentry": {
+        "category": "Error Tracking",
+        "patterns": ["sentry.io", "sentry-trace"]
+    },
+    "New Relic": {
+        "category": "Observability",
+        "patterns": ["newrelic.com", "nr-data.net"]
+    },
+    "Segment": {
+        "category": "Analytics",
+        "patterns": ["cdn.segment.com", "segment.io"]
+    },
+    "HubSpot": {
+        "category": "Marketing",
+        "patterns": ["hs-scripts.com", "hsforms.net"]
+    },
+    "Intercom": {
+        "category": "Customer Support",
+        "patterns": ["widget.intercom.io", "intercomcdn.com"]
+    },
+    "Zendesk": {
+        "category": "Customer Support",
+        "patterns": ["zdassets.com", "zendesk.com"]
+    },
+    "Crisp": {
+        "category": "Customer Support",
+        "patterns": ["client.crisp.chat"]
+    },
+    "Tawk.to": {
+        "category": "Customer Support",
+        "patterns": ["embed.tawk.to"]
+    },
+    "Drift": {
+        "category": "Customer Support",
+        "patterns": ["js.driftt.com"]
+    },
+    "Freshchat": {
+        "category": "Customer Support",
+        "patterns": ["wchat.freshchat.com"]
+    },
+    "LiveChat": {
+        "category": "Customer Support",
+        "patterns": ["cdn.livechatinc.com"]
+    },
+    "Optimizely": {
+        "category": "A/B Testing",
+        "patterns": ["cdn.optimizely.com"]
+    },
+    "VWO": {
+        "category": "A/B Testing",
+        "patterns": ["dev.visualwebsiteoptimizer.com"]
+    },
+    "Google Optimize": {
+        "category": "A/B Testing",
+        "patterns": ["googleoptimize.com"]
+    },
+    "Cloudinary": {
+        "category": "Media/CDN",
+        "patterns": ["res.cloudinary.com"]
+    },
+    "imgix": {
+        "category": "Media/CDN",
+        "patterns": [".imgix.net"]
+    },
+    "Contentful": {
+        "category": "Headless CMS",
+        "patterns": ["cdn.contentful.com", "images.ctfassets.net"]
+    },
+    "Sanity": {
+        "category": "Headless CMS",
+        "patterns": ["cdn.sanity.io"]
+    },
+    "Strapi": {
+        "category": "Headless CMS",
+        "patterns": ["strapi.io"]
+    },
+    "Prismic": {
+        "category": "Headless CMS",
+        "patterns": ["prismic.io"]
+    },
+    "Storyblok": {
+        "category": "Headless CMS",
+        "patterns": ["storyblok.com"]
+    },
+    "Apollo Client": {
+        "category": "API",
+        "patterns": ["apollo-client", "__APOLLO_STATE__"]
+    },
+    "Webpack": {
+        "category": "Build Tool",
+        "patterns": ["webpackjsonp", "__webpack_require__"]
+    },
+    "Vite": {
+        "category": "Build Tool",
+        "patterns": ["/@vite/client"]
+    },
+    "Parcel": {
+        "category": "Build Tool",
+        "patterns": ["parcelrequire"]
+    },
+    "Redux": {
+        "category": "State Management",
+        "patterns": ["__REDUX_DEVTOOLS_EXTENSION__"]
+    },
+    "Firebase": {
+        "category": "Backend",
+        "patterns": ["firebaseio.com", "firebaseapp.com"]
+    },
+    "Supabase": {
+        "category": "Backend",
+        "patterns": ["supabase.co", "supabase.in"]
+    },
+    "Google reCAPTCHA v3": {
+        "category": "Security",
+        "patterns": ["recaptcha/api.js?render="]
+    },
+    "Algolia Search": {
+        "category": "Search",
+        "patterns": ["algolia.net", "algolianet.com"]
+    },
 }
 
 EXTRA_SCRIPT_SIGNATURES = {
-
     "sentry.io": ("Sentry", "Error Tracking"),
     "browser.sentry-cdn.com": ("Sentry", "Error Tracking"),
     "js-agent.newrelic.com": ("New Relic", "Observability"),
@@ -1927,22 +1727,18 @@ EXTRA_SCRIPT_SIGNATURES = {
     "algolia": ("Algolia Search", "Search"),
     "typesense": ("Typesense Search", "Search"),
     "meilisearch": ("MeiliSearch", "Search"),
-
 }
 
 EXTRA_LINK_SIGNATURES = {
-
     "res.cloudinary.com": ("Cloudinary", "Media/CDN"),
     "imgix.net": ("imgix", "Media/CDN"),
     "images.ctfassets.net": ("Contentful", "Headless CMS"),
     "cdn.sanity.io": ("Sanity", "Headless CMS"),
     "kit.fontawesome.com": ("Font Awesome", "Fonts"),
     "fonts.bunny.net": ("Bunny Fonts", "Fonts"),
-
 }
 
 EXTRA_COOKIE_SIGNATURES = {
-
     "__Secure-next-auth.session-token": ("NextAuth", "Authentication"),
     "PLAY_SESSION": ("Play Framework", "Backend"),
     "symfony": ("Symfony", "Backend"),
@@ -1952,11 +1748,9 @@ EXTRA_COOKIE_SIGNATURES = {
     "_shopify_y": ("Shopify", "CMS"),
     "wixLanguage": ("Wix", "CMS"),
     "OptanonConsent": ("OneTrust", "Security"),
-
 }
 
 EXTRA_COOKIE_PREFIX_SIGNATURES = [
-
     ("__Secure-", "Secure Cookie Prefix", "Security"),
     ("__Host-", "Host Cookie Prefix", "Security"),
     ("AWSALB", "AWS Application Load Balancer", "Hosting"),
@@ -1965,11 +1759,9 @@ EXTRA_COOKIE_PREFIX_SIGNATURES = [
     ("razorpay", "Razorpay", "Payment"),
     ("_hjid", "Hotjar", "Analytics"),
     ("amplitude_id", "Amplitude", "Analytics"),
-
 ]
 
 EXTRA_INLINE_JS_SIGNATURES = {
-
     "Sentry.init": ("Sentry", "Error Tracking"),
     "newrelic.config": ("New Relic", "Observability"),
     "analytics.load": ("Segment", "Analytics"),
@@ -1979,11 +1771,9 @@ EXTRA_INLINE_JS_SIGNATURES = {
     "drift.load": ("Drift", "Customer Support"),
     "__APOLLO_STATE__": ("Apollo Client", "API"),
     "webpackJsonp": ("Webpack", "Build Tool"),
-
 }
 
 EXTRA_DOM_ATTRIBUTE_SIGNATURES = {
-
     "v-bind": ("Vue.js", "Frontend Framework"),
     "v-if": ("Vue.js", "Frontend Framework"),
     "v-for": ("Vue.js", "Frontend Framework"),
@@ -1992,20 +1782,16 @@ EXTRA_DOM_ATTRIBUTE_SIGNATURES = {
     "data-turbo": ("Turbo (Hotwire)", "Frontend Framework"),
     "data-controller": ("Stimulus (Hotwire)", "Frontend Framework"),
     "astro-island": ("Astro", "Frontend Framework"),
-
 }
 
 EXTRA_FORM_SIGNATURES = {
-
     "wpcf7-form-tag": ("Contact Form 7 (WordPress)", "Plugin"),
     "gform_submit": ("Gravity Forms (WordPress)", "Plugin"),
     "nf-field": ("Ninja Forms (WordPress)", "Plugin"),
     "wc-order-fields": ("WooCommerce", "Plugin"),
-
 }
 
 EXTRA_URL_SIGNATURES = {
-
     "sentry.io": ("Sentry", "Error Tracking"),
     "newrelic.com": ("New Relic", "Observability"),
     "segment.com": ("Segment", "Analytics"),
@@ -2017,13 +1803,12 @@ EXTRA_URL_SIGNATURES = {
     "cloudinary.com": ("Cloudinary", "Media/CDN"),
     "algolia.net": ("Algolia Search", "Search"),
     "algolianet.com": ("Algolia Search", "Search"),
-
 }
 
 # ---------- More version-capture patterns for script/link based techs ----------
 EXTRA_TECH_VERSION_PATTERNS = {
-
-    "React": [r"react[@/-]([\d.]+)", r"react\.production\.min\.js\?v=([\d.]+)"],
+    "React":
+    [r"react[@/-]([\d.]+)", r"react\.production\.min\.js\?v=([\d.]+)"],
     "Vue.js": [r"vue[@/-]([\d.]+)", r"vue\.global\.js\?v=([\d.]+)"],
     "Angular": [r"angular[@/-]([\d.]+)"],
     "Lodash": [r"lodash[@/.-]([\d.]+)"],
@@ -2045,18 +1830,20 @@ EXTRA_TECH_VERSION_PATTERNS = {
     "Preact": [r"preact[@/.-]([\d.]+)"],
     "htmx": [r"htmx\.org@([\d.]+)", r"htmx[@/.-]([\d.]+)"],
     "jQuery UI": [r"jquery-ui[@/.-]([\d.]+)"],
-    "Swiper.js": [r"swiper[@/.-]([\d.]+)", r"swiper-bundle\.min\.js\?v=([\d.]+)"],
-
+    "Swiper.js":
+    [r"swiper[@/.-]([\d.]+)", r"swiper-bundle\.min\.js\?v=([\d.]+)"],
 }
 
 TECH_VERSION_PATTERNS.update(EXTRA_TECH_VERSION_PATTERNS)
 
 HEADER_SIGNATURES["Server"].update(EXTRA_HEADER_SIGNATURES["Server"])
-HEADER_SIGNATURES["X-Powered-By"].update(EXTRA_HEADER_SIGNATURES["X-Powered-By"])
+HEADER_SIGNATURES["X-Powered-By"].update(
+    EXTRA_HEADER_SIGNATURES["X-Powered-By"])
 
 PRESENCE_HEADER_SIGNATURES.update(EXTRA_PRESENCE_HEADER_SIGNATURES)
 
-REVERSE_PROXY_SIGNATURES["Server"].update(EXTRA_REVERSE_PROXY_SIGNATURES["Server"])
+REVERSE_PROXY_SIGNATURES["Server"].update(
+    EXTRA_REVERSE_PROXY_SIGNATURES["Server"])
 
 CDN_SIGNATURES["Server"].update(EXTRA_CDN_SIGNATURES["Server"])
 CDN_SIGNATURES["X-Edge-Location"] = EXTRA_CDN_SIGNATURES["X-Edge-Location"]
@@ -2075,9 +1862,8 @@ DOM_ATTRIBUTE_SIGNATURES.update(EXTRA_DOM_ATTRIBUTE_SIGNATURES)
 FORM_SIGNATURES.update(EXTRA_FORM_SIGNATURES)
 URL_SIGNATURES.update(EXTRA_URL_SIGNATURES)
 
-
 # ==========================================================
-# REGEX PRECOMPILATION 
+# REGEX PRECOMPILATION
 # All the *_SIGNATURES dicts above store "pattern" as a raw
 # string, which every detect_*() call was re-compiling on
 # every re.search(). On a large scan this adds up fast. This
@@ -2085,6 +1871,7 @@ URL_SIGNATURES.update(EXTRA_URL_SIGNATURES)
 # string pattern with a compiled regex object (IGNORECASE
 # baked in), so detect_*() just calls pattern.search(value).
 # ==========================================================
+
 
 def _compile_header_style_signatures(signature_dict):
     """
@@ -2119,8 +1906,7 @@ def _compile_pattern_list_dict(pattern_list_dict):
     """
     for name, patterns in pattern_list_dict.items():
         pattern_list_dict[name] = [
-            re.compile(p, re.I) if isinstance(p, str) else p
-            for p in patterns
+            re.compile(p, re.I) if isinstance(p, str) else p for p in patterns
         ]
 
 
@@ -2131,8 +1917,7 @@ def _compile_flat_pattern_dict(flat_dict):
     """
     for name, patterns in flat_dict.items():
         flat_dict[name] = [
-            re.compile(p, re.I) if isinstance(p, str) else p
-            for p in patterns
+            re.compile(p, re.I) if isinstance(p, str) else p for p in patterns
         ]
 
 
@@ -2143,7 +1928,6 @@ _compile_header_style_signatures(WAF_SIGNATURES)
 _compile_cms_signatures(CMS_SIGNATURES)
 _compile_pattern_list_dict(TECH_VERSION_PATTERNS)
 
-
 # ==========================================================
 # ACTIVE-RECON SIGNATURES
 # Database fingerprinting, EOL/outdated version rules,
@@ -2153,7 +1937,6 @@ _compile_pattern_list_dict(TECH_VERSION_PATTERNS)
 
 # ---------- Database error-message fingerprints ----------
 DB_ERROR_PATTERNS = {
-
     "MySQL": [
         r"you have an error in your sql syntax",
         r"mysql_fetch_array\(\)",
@@ -2161,7 +1944,6 @@ DB_ERROR_PATTERNS = {
         r"warning:\s*mysql",
         r"supplied argument is not a valid mysql",
     ],
-
     "PostgreSQL": [
         r"pg_query\(\)",
         r"pg_exec\(\)",
@@ -2169,38 +1951,32 @@ DB_ERROR_PATTERNS = {
         r"unterminated quoted string at or near",
         r"invalid input syntax for",
     ],
-
     "Microsoft SQL Server": [
         r"microsoft sql server",
         r"unclosed quotation mark after the character string",
         r"odbc sql server driver",
         r"sqlserverexception",
     ],
-
     "Oracle": [
         r"ora-\d{5}",
         r"oracle error",
         r"oracle.*driver",
     ],
-
     "SQLite": [
         r"sqlite3?::",
         r"sqlite_error",
         r"unable to open database file",
         r"sqlite\.oledb",
     ],
-
     "MongoDB": [
         r"mongoerror",
         r"mongodb\\.driver",
         r"e11000 duplicate key error",
     ],
-
 }
 
 # ---------- Backend/driver hints inside X-Powered-By or similar ----------
 DB_HEADER_HINTS = {
-
     "mysqlnd": "MySQL",
     "pdo_mysql": "MySQL",
     "mysqli": "MySQL",
@@ -2208,12 +1984,10 @@ DB_HEADER_HINTS = {
     "pgsql": "PostgreSQL",
     "sqlsrv": "Microsoft SQL Server",
     "oci8": "Oracle",
-
 }
 
 # ---------- Admin panels (CMS + DB admin tools) ----------
 ADMIN_PANEL_PATHS = {
-
     "/phpmyadmin/": ("phpMyAdmin", "Database Admin Panel"),
     "/pma/": ("phpMyAdmin", "Database Admin Panel"),
     "/phpMyAdmin/": ("phpMyAdmin", "Database Admin Panel"),
@@ -2225,12 +1999,10 @@ ADMIN_PANEL_PATHS = {
     "/administrator/": ("Joomla Admin", "CMS Admin Panel"),
     "/user/login": ("Drupal Login", "CMS Admin Panel"),
     "/admin/": ("Generic Admin Panel", "Admin Panel"),
-
 }
 
 # ---------- Sensitive / commonly-forgotten exposed files ----------
 SENSITIVE_PATHS = {
-
     "/.git/config": "Git repository exposure",
     "/.git/HEAD": "Git repository exposure",
     "/.env": "Environment file exposure",
@@ -2248,12 +2020,10 @@ SENSITIVE_PATHS = {
     "/.aws/credentials": "AWS credentials exposure",
     "/docker-compose.yml": "Docker Compose config exposure",
     "/id_rsa": "SSH private key exposure",
-
 }
 
 # ---------- API / schema discovery paths ----------
 API_ENDPOINT_PATHS = {
-
     "/graphql": "GraphQL API",
     "/api/graphql": "GraphQL API",
     "/swagger.json": "Swagger/OpenAPI spec",
@@ -2262,20 +2032,23 @@ API_ENDPOINT_PATHS = {
     "/api/swagger.json": "Swagger/OpenAPI spec",
     "/.well-known/openid-configuration": "OpenID Connect discovery",
     "/api/v1/": "REST API root",
-
 }
 
 # ---------- Known EOL / vulnerable minimum-safe versions ----------
 # value = (minimum_safe_version_tuple, human note)
 EOL_VERSION_RULES = {
-
-    "jQuery": ((3, 0, 0), "jQuery < 3.0 has known XSS issues (CVE-2020-11022/11023)."),
-    "WordPress": ((5, 8, 0), "Older WordPress core releases have multiple known CVEs."),
-    "PHP": ((7, 4, 0), "PHP versions below 7.4 are end-of-life and unsupported."),
-    "Bootstrap": ((4, 0, 0), "Bootstrap 3.x has known XSS issues in tooltip/popover."),
-    "Drupal": ((9, 0, 0), "Older Drupal versions have multiple known CVEs (Drupalgeddon family)."),
+    "jQuery":
+    ((3, 0, 0), "jQuery < 3.0 has known XSS issues (CVE-2020-11022/11023)."),
+    "WordPress":
+    ((5, 8, 0), "Older WordPress core releases have multiple known CVEs."),
+    "PHP":
+    ((7, 4, 0), "PHP versions below 7.4 are end-of-life and unsupported."),
+    "Bootstrap": ((4, 0, 0),
+                  "Bootstrap 3.x has known XSS issues in tooltip/popover."),
+    "Drupal":
+    ((9, 0, 0),
+     "Older Drupal versions have multiple known CVEs (Drupalgeddon family)."),
     "Joomla": ((4, 0, 0), "Older Joomla releases have multiple known CVEs."),
-
 }
 
 # ---------- Favicon hashes (mmh3, Wappalyzer-style) ----------
@@ -2296,9 +2069,7 @@ class TechnologyScanner(BaseModule):
 
     category = "Core"
 
-    description = (
-        "Detect technologies, CMS, frameworks and servers."
-    )
+    description = ("Detect technologies, CMS, frameworks and servers.")
 
     MAX_CONFIDENCE = 100
     MAX_EVIDENCE_PER_TECH = 5
@@ -2360,34 +2131,26 @@ class TechnologyScanner(BaseModule):
         content_type = self.headers.get("Content-Type", "")
         # Treat unknown/empty content-type as HTML-ish rather than skipping
         # detection outright; only explicitly non-text types are excluded.
-        self.is_html = (
-            "html" in content_type.lower()
-            or content_type == ""
-            or "text" in content_type.lower()
-        )
+        self.is_html = ("html" in content_type.lower() or content_type == ""
+                        or "text" in content_type.lower())
 
         self.html = scanner.response.text if self.is_html else ""
 
-        self.soup = BeautifulSoup(self.html, "html.parser") if self.html else BeautifulSoup("", "html.parser")
+        self.soup = BeautifulSoup(
+            self.html, "html.parser") if self.html else BeautifulSoup(
+                "", "html.parser")
 
         self.server = self.headers.get("Server", "")
 
         self.powered = self.headers.get("X-Powered-By", "")
 
     def add_detection(
-
         self,
-
         name,
-
         category,
-
         evidence,
-
         confidence=25,
-
         version="-",
-
     ):
 
         key = name.strip()
@@ -2395,24 +2158,19 @@ class TechnologyScanner(BaseModule):
         if key not in self.tech:
 
             self.tech[key] = Technology(
-
                 name=key,
-
                 category=category,
-
                 version=version,
-
                 confidence=min(confidence, self.MAX_CONFIDENCE),
-
                 evidence=[evidence],
-
             )
 
             return
 
         tech = self.tech[key]
 
-        if evidence not in tech.evidence and len(tech.evidence) < self.MAX_EVIDENCE_PER_TECH:
+        if evidence not in tech.evidence and len(
+                tech.evidence) < self.MAX_EVIDENCE_PER_TECH:
 
             tech.evidence.append(evidence)
 
@@ -2446,13 +2204,9 @@ class TechnologyScanner(BaseModule):
     def extract_version(pattern, text):
 
         match = re.search(
-
             pattern,
-
             text,
-
             re.I,
-
         )
 
         if not match:
@@ -2490,41 +2244,28 @@ class TechnologyScanner(BaseModule):
         return tuple(parts)
 
     def html_contains(
-
         self,
-
         value,
-
     ):
 
         return value.lower() in self.html.lower()
 
     def header_contains(
-
         self,
-
         header,
-
         value,
-
     ):
 
         current = self.headers.get(
-
             header,
-
             "",
-
         )
 
         return value.lower() in current.lower()
 
     def cookie_exists(
-
         self,
-
         cookie,
-
     ):
 
         return cookie in self.cookies
@@ -2532,21 +2273,11 @@ class TechnologyScanner(BaseModule):
     def meta_generator(self):
 
         tag = self.soup.find(
-
             "meta",
-
-            attrs={
-
-                "name": re.compile(
-
-                    "generator",
-
-                    re.I,
-
-                )
-
-            },
-
+            attrs={"name": re.compile(
+                "generator",
+                re.I,
+            )},
         )
 
         if not tag:
@@ -2554,11 +2285,8 @@ class TechnologyScanner(BaseModule):
             return ""
 
         return tag.get(
-
             "content",
-
             "",
-
         )
 
     # ==========================================================
@@ -2574,7 +2302,6 @@ class TechnologyScanner(BaseModule):
                     return match.group(1).strip(".")
 
         patterns = [
-
             r'[-@]v?(\d+\.\d+(?:\.\d+)*)',
             r'[?&]v=(\d+\.\d+(?:\.\d+)*)',
             r'/(\d+\.\d+(?:\.\d+)?)/',
@@ -2736,18 +2463,15 @@ class TechnologyScanner(BaseModule):
                 if signature not in src:
                     continue
 
-                version = self.extract_version_from_url(
-                    src,
-                    tech[0]
-                )
+                version = self.extract_version_from_url(src, tech[0])
 
                 self.add_detection(
-                        name=tech[0],
-                        category=tech[1],
-                        version=version,
-                        confidence=70,
-                        evidence=f"Script: {src}",
-                    )
+                    name=tech[0],
+                    category=tech[1],
+                    version=version,
+                    confidence=70,
+                    evidence=f"Script: {src}",
+                )
 
     # ==========================================================
     # Link Detection (stylesheets, fonts, CDN-hosted assets)
@@ -2763,18 +2487,15 @@ class TechnologyScanner(BaseModule):
 
                 if signature not in href:
                     continue
-                version = self.extract_version_from_url(
-                    href,
-                    tech[0]
-                    )
+                version = self.extract_version_from_url(href, tech[0])
 
                 self.add_detection(
-                        name=tech[0],
-                        category=tech[1],
-                        version=version,
-                        confidence=70,
-                        evidence=f"Link: {href}",
-                    )
+                    name=tech[0],
+                    category=tech[1],
+                    version=version,
+                    confidence=70,
+                    evidence=f"Link: {href}",
+                )
 
     # ==========================================================
     # Inline JavaScript Detection
@@ -2798,12 +2519,10 @@ class TechnologyScanner(BaseModule):
 
                 if pattern.lower() in lower:
 
-                    self.add_detection(
-                        name=tech[0],
-                        category=tech[1],
-                        confidence=75,
-                        evidence=f"Inline JS: {pattern}"
-                    )
+                    self.add_detection(name=tech[0],
+                                       category=tech[1],
+                                       confidence=75,
+                                       evidence=f"Inline JS: {pattern}")
 
     # ==========================================================
     # DOM Attribute Detection
@@ -2821,12 +2540,10 @@ class TechnologyScanner(BaseModule):
 
                     tech = DOM_ATTRIBUTE_SIGNATURES[attr]
 
-                    self.add_detection(
-                        name=tech[0],
-                        category=tech[1],
-                        confidence=70,
-                        evidence=f"DOM Attribute: {attr}"
-                    )
+                    self.add_detection(name=tech[0],
+                                       category=tech[1],
+                                       confidence=70,
+                                       evidence=f"DOM Attribute: {attr}")
 
     # ==========================================================
     # URL Detection
@@ -2840,12 +2557,10 @@ class TechnologyScanner(BaseModule):
 
             if signature.lower() in html:
 
-                self.add_detection(
-                    name=tech[0],
-                    category=tech[1],
-                    confidence=70,
-                    evidence=f"URL: {signature}"
-                )
+                self.add_detection(name=tech[0],
+                                   category=tech[1],
+                                   confidence=70,
+                                   evidence=f"URL: {signature}")
 
     # ==========================================================
     # Form Detection
@@ -2869,12 +2584,10 @@ class TechnologyScanner(BaseModule):
 
                         tech = FORM_SIGNATURES[field]
 
-                        self.add_detection(
-                            name=tech[0],
-                            category=tech[1],
-                            confidence=80,
-                            evidence=f"Form Field: {field}"
-                        )
+                        self.add_detection(name=tech[0],
+                                           category=tech[1],
+                                           confidence=80,
+                                           evidence=f"Form Field: {field}")
 
     # ==========================================================
     # Operating System Detection
@@ -2882,10 +2595,8 @@ class TechnologyScanner(BaseModule):
 
     def detect_operating_system(self):
 
-        headers = "\n".join(
-            f"{k}: {v}"
-            for k, v in self.headers.items()
-        ).lower()
+        headers = "\n".join(f"{k}: {v}"
+                            for k, v in self.headers.items()).lower()
 
         html = self.html.lower()
 
@@ -3026,7 +2737,8 @@ class TechnologyScanner(BaseModule):
         # Meta Generator
         # ----------------------------------------
 
-        generator = self.soup.find("meta", attrs={"name": re.compile(r"generator", re.I)})
+        generator = self.soup.find(
+            "meta", attrs={"name": re.compile(r"generator", re.I)})
 
         if generator and generator.get("content"):
 
@@ -3185,8 +2897,7 @@ class TechnologyScanner(BaseModule):
                 )
 
                 self.findings["database"].append(
-                    f"{db_name} — driver hint in X-Powered-By ({hint})"
-                )
+                    f"{db_name} — driver hint in X-Powered-By ({hint})")
 
     # ==========================================================
     # Outdated / EOL Version Flagging (added — 0ct0pu3 update)
@@ -3209,8 +2920,7 @@ class TechnologyScanner(BaseModule):
             if current < min_safe:
 
                 self.findings["outdated"].append(
-                    f"{tech.name} {tech.version} — {note}"
-                )
+                    f"{tech.name} {tech.version} — {note}")
 
                 if len(tech.evidence) < self.MAX_EVIDENCE_PER_TECH:
                     tech.evidence.append(f"Outdated: {note}")
@@ -3278,7 +2988,9 @@ class TechnologyScanner(BaseModule):
             url = urljoin(base, path)
 
             try:
-                response = await scanner.client.get(url, timeout=8, follow_redirects=False)
+                response = await scanner.client.get(url,
+                                                    timeout=8,
+                                                    follow_redirects=False)
             except Exception:
                 continue
 
@@ -3303,7 +3015,9 @@ class TechnologyScanner(BaseModule):
             url = urljoin(base, path)
 
             try:
-                response = await scanner.client.get(url, timeout=8, follow_redirects=True)
+                response = await scanner.client.get(url,
+                                                    timeout=8,
+                                                    follow_redirects=True)
             except Exception:
                 continue
 
@@ -3328,17 +3042,21 @@ class TechnologyScanner(BaseModule):
             url = urljoin(base, path)
 
             try:
-                response = await scanner.client.get(url, timeout=8, follow_redirects=True)
+                response = await scanner.client.get(url,
+                                                    timeout=8,
+                                                    follow_redirects=True)
             except Exception:
                 continue
 
-            if response is None or response.status_code not in (200, 400, 401, 403):
+            if response is None or response.status_code not in (200, 400, 401,
+                                                                403):
                 continue
 
             if response.status_code == 200 and not self._is_real_hit(response):
                 continue
 
-            self.findings["api_endpoints"].append(f"{path} — {label} (HTTP {response.status_code})")
+            self.findings["api_endpoints"].append(
+                f"{path} — {label} (HTTP {response.status_code})")
 
             self.add_detection(
                 name=label,
@@ -3542,20 +3260,18 @@ class TechnologyScanner(BaseModule):
     def to_json(self):
 
         return {
-            "technologies": [
-                {
-                    "name": t.name,
-                    "category": t.category,
-                    "version": t.version,
-                    "confidence": t.confidence,
-                    "evidence": t.evidence,
-                }
-                for t in sorted(
-                    self.tech.values(),
-                    key=lambda x: (-x.confidence, x.category, x.name),
-                )
-            ],
-            "findings": self.findings,
+            "technologies": [{
+                "name": t.name,
+                "category": t.category,
+                "version": t.version,
+                "confidence": t.confidence,
+                "evidence": t.evidence,
+            } for t in sorted(
+                self.tech.values(),
+                key=lambda x: (-x.confidence, x.category, x.name),
+            )],
+            "findings":
+            self.findings,
         }
 
     # ==========================================================
@@ -3572,8 +3288,8 @@ class TechnologyScanner(BaseModule):
         table.add_column("Confidence", justify="right")
 
         for tech in sorted(
-            self.tech.values(),
-            key=lambda x: (-x.confidence, x.category, x.name),
+                self.tech.values(),
+                key=lambda x: (-x.confidence, x.category, x.name),
         ):
             table.add_row(
                 tech.category,
@@ -3592,8 +3308,7 @@ class TechnologyScanner(BaseModule):
             f"{len(self.findings['sensitive_files'])} exposed file(s), "
             f"{len(self.findings['admin_panels'])} accessible admin panel(s), "
             f"{len(self.findings['sourcemaps'])} exposed source map(s), "
-            f"{len(self.findings['outdated'])} outdated technolog(y/ies)."
-        )
+            f"{len(self.findings['outdated'])} outdated technolog(y/ies).")
 
     # ==========================================================
     # Run
@@ -3638,8 +3353,8 @@ class TechnologyScanner(BaseModule):
         rows = []
 
         for tech in sorted(
-            self.tech.values(),
-            key=lambda x: (-x.confidence, x.category, x.name),
+                self.tech.values(),
+                key=lambda x: (-x.confidence, x.category, x.name),
         ):
             rows.append([
                 tech.category,
@@ -3675,7 +3390,8 @@ class TechnologyScanner(BaseModule):
                     items=self.findings["database"],
                     score=0,
                     max_score=0,
-                    description="Indirect signals about the backing database engine.",
+                    description=
+                    "Indirect signals about the backing database engine.",
                 ),
             )
 
@@ -3687,7 +3403,8 @@ class TechnologyScanner(BaseModule):
                     items=self.findings["sensitive_files"],
                     score=0,
                     max_score=0,
-                    description="Potentially sensitive files/paths accessible on the target.",
+                    description=
+                    "Potentially sensitive files/paths accessible on the target.",
                 ),
             )
 
@@ -3699,7 +3416,8 @@ class TechnologyScanner(BaseModule):
                     items=self.findings["admin_panels"],
                     score=0,
                     max_score=0,
-                    description="Admin/DB-admin panels reachable without authentication checks.",
+                    description=
+                    "Admin/DB-admin panels reachable without authentication checks.",
                 ),
             )
 
@@ -3711,7 +3429,8 @@ class TechnologyScanner(BaseModule):
                     items=self.findings["api_endpoints"],
                     score=0,
                     max_score=0,
-                    description="API/schema-discovery paths that responded on the target.",
+                    description=
+                    "API/schema-discovery paths that responded on the target.",
                 ),
             )
 
@@ -3724,7 +3443,7 @@ class TechnologyScanner(BaseModule):
                     score=0,
                     max_score=0,
                     description="JavaScript source maps exposed in production, "
-                                "which can leak original source code.",
+                    "which can leak original source code.",
                 ),
             )
 
@@ -3736,6 +3455,7 @@ class TechnologyScanner(BaseModule):
                     items=self.findings["outdated"],
                     score=0,
                     max_score=0,
-                    description="Detected technologies below their known-safe minimum version.",
+                    description=
+                    "Detected technologies below their known-safe minimum version.",
                 ),
             )

@@ -12,14 +12,13 @@ from core.base_module import BaseModule
 from core.report_schema import Report
 from rich.table import Table
 
+
 class Module(BaseModule):
 
     name = "javascript"
     category = "Passive"
 
-    description = (
-        "Discover external JavaScript resources."
-    )
+    description = ("Discover external JavaScript resources.")
 
     API_PATTERNS = [
         r"/api/[A-Za-z0-9_\-/]+",
@@ -96,15 +95,13 @@ class Module(BaseModule):
             if not src:
                 continue
 
-            js_files.append(
-                urljoin(
-                    scanner.target,
-                    src,
-                )
-            )
+            js_files.append(urljoin(
+                scanner.target,
+                src,
+            ))
 
         js_files = sorted(set(js_files))
-        
+
         # ---------------------------------------
         # Analyze JavaScript Files
         # ---------------------------------------
@@ -123,7 +120,7 @@ class Module(BaseModule):
                 continue
 
             text = r.text
-            
+
             # ---------------------------------------
             # Source Maps
             # ---------------------------------------
@@ -144,12 +141,10 @@ class Module(BaseModule):
             # WebSocket URLs
             # ---------------------------------------
 
-            websocket_urls.extend(
-                re.findall(
-                    r"wss?://[^\s\"']+",
-                    text,
-                )
-            )
+            websocket_urls.extend(re.findall(
+                r"wss?://[^\s\"']+",
+                text,
+            ))
 
             # ---------------------------------------
             # Firebase References
@@ -205,12 +200,10 @@ class Module(BaseModule):
 
                     for secret in matches:
 
-                        secret_hits.append(
-                            (
-                                name,
-                                secret[:50],
-                            )
-                        )
+                        secret_hits.append((
+                            name,
+                            secret[:50],
+                        ))
 
                 except Exception:
                     continue
@@ -236,12 +229,10 @@ class Module(BaseModule):
 
                 try:
 
-                    interesting_urls.extend(
-                        re.findall(
-                            pattern,
-                            text,
-                        )
-                    )
+                    interesting_urls.extend(re.findall(
+                        pattern,
+                        text,
+                    ))
 
                 except Exception:
                     continue
@@ -257,22 +248,16 @@ class Module(BaseModule):
                     re.findall(
                         r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
                         text,
-                    )
-                )
-            )
+                    )))
 
             # ---------------------------------------
             # IPv4 Addresses
             # ---------------------------------------
 
-            ips = sorted(
-                set(
-                    re.findall(
-                        r"(?:\d{1,3}\.){3}\d{1,3}",
-                        text,
-                    )
-                )
-            )
+            ips = sorted(set(re.findall(
+                r"(?:\d{1,3}\.){3}\d{1,3}",
+                text,
+            )))
 
             # ---------------------------------------
             # Admin / Sensitive Keywords
@@ -330,30 +315,16 @@ class Module(BaseModule):
             # Report Row
             # ---------------------------------------
 
-            rows.append(
-                {
-                    "JavaScript": js,
-                    "APIs": len(set(api_hits)),
-                    "Secrets": len(secret_hits),
-                    "Emails": len(emails),
-                    "IPs": len(ips),
-                    "Source Maps": (
-                        "Yes"
-                        if js in source_maps
-                        else "No"
-                    ),
-                    "Firebase": (
-                        "Yes"
-                        if js in firebase_hits
-                        else "No"
-                    ),
-                    "WebSocket": (
-                        "Yes"
-                        if websocket_urls
-                        else "No"
-                    ),
-                }
-            )
+            rows.append({
+                "JavaScript": js,
+                "APIs": len(set(api_hits)),
+                "Secrets": len(secret_hits),
+                "Emails": len(emails),
+                "IPs": len(ips),
+                "Source Maps": ("Yes" if js in source_maps else "No"),
+                "Firebase": ("Yes" if js in firebase_hits else "No"),
+                "WebSocket": ("Yes" if websocket_urls else "No"),
+            })
 
         # ---------------------------------------
         # Cleanup
@@ -365,28 +336,19 @@ class Module(BaseModule):
         websocket_urls = sorted(set(websocket_urls))
         firebase_hits = sorted(set(firebase_hits))
 
-        secret_hits = list(
-            dict.fromkeys(secret_hits)
-        )
+        secret_hits = list(dict.fromkeys(secret_hits))
 
         # ---------------------------------------
         # Build Summary
         # ---------------------------------------
 
         summary = [
-
             f"JavaScript Files : {len(js_files)}",
-
             f"API Endpoints : {len(api_hits)}",
-
             f"Secrets Found : {len(secret_hits)}",
-
             f"Source Maps : {len(source_maps)}",
-
             f"Firebase References : {len(firebase_hits)}",
-
             f"WebSocket URLs : {len(websocket_urls)}",
-
         ]
 
         description = " | ".join(summary)
@@ -437,19 +399,9 @@ class Module(BaseModule):
                 str(len(secret_hits)),
             )
 
-            email_count = len(
-                {
-                    row["Emails"]
-                    for row in rows
-                }
-            )
+            email_count = len({row["Emails"] for row in rows})
 
-            ip_count = len(
-                {
-                    row["IPs"]
-                    for row in rows
-                }
-            )
+            ip_count = len({row["IPs"] for row in rows})
 
             table.add_row(
                 "Emails",
@@ -498,7 +450,7 @@ class Module(BaseModule):
             )
 
             return
-        
+
         # ---------------------------------------
         # JavaScript Intelligence Report
         # ---------------------------------------
@@ -555,16 +507,14 @@ class Module(BaseModule):
                         "Type",
                         "Preview",
                     ],
-                    rows=[
-                        {
-                            "Type": secret_type,
-                            "Preview": preview,
-                        }
-                        for secret_type, preview in secret_hits
-                    ],
+                    rows=[{
+                        "Type": secret_type,
+                        "Preview": preview,
+                    } for secret_type, preview in secret_hits],
                     score=0,
                     max_score=0,
-                    description="Potential secrets detected inside JavaScript resources.",
+                    description=
+                    "Potential secrets detected inside JavaScript resources.",
                 ),
             )
 
@@ -581,7 +531,8 @@ class Module(BaseModule):
                     items=source_maps,
                     score=0,
                     max_score=0,
-                    description=f"{len(source_maps)} source map reference(s) detected.",
+                    description=
+                    f"{len(source_maps)} source map reference(s) detected.",
                 ),
             )
 
@@ -598,7 +549,8 @@ class Module(BaseModule):
                     items=firebase_hits,
                     score=0,
                     max_score=0,
-                    description=f"{len(firebase_hits)} Firebase reference(s) detected.",
+                    description=
+                    f"{len(firebase_hits)} Firebase reference(s) detected.",
                 ),
             )
 
@@ -615,6 +567,7 @@ class Module(BaseModule):
                     items=websocket_urls,
                     score=0,
                     max_score=0,
-                    description=f"{len(websocket_urls)} WebSocket endpoint(s) detected.",
+                    description=
+                    f"{len(websocket_urls)} WebSocket endpoint(s) detected.",
                 ),
             )

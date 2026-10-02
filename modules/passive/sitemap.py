@@ -16,9 +16,7 @@ class Module(BaseModule):
     name = "sitemap"
     category = "Passive"
 
-    description = (
-        "Discover and analyze sitemap.xml."
-    )
+    description = ("Discover and analyze sitemap.xml.")
 
     LOCATIONS = [
         "/sitemap.xml",
@@ -114,36 +112,30 @@ class Module(BaseModule):
 
         if root.tag.endswith("urlset"):
 
-            urls = (
-                root.findall("sm:url", ns)
-                if ns else
-                root.findall("url")
-            )
+            urls = (root.findall("sm:url", ns) if ns else root.findall("url"))
 
             for url in urls:
 
                 loc = url.find("sm:loc", ns) if ns else url.find("loc")
-                lastmod = url.find("sm:lastmod", ns) if ns else url.find("lastmod")
-                changefreq = (
-                    url.find("sm:changefreq", ns)
-                    if ns else
-                    url.find("changefreq")
-                )
-                priority = (
-                    url.find("sm:priority", ns)
-                    if ns else
-                    url.find("priority")
-                )
+                lastmod = url.find("sm:lastmod",
+                                   ns) if ns else url.find("lastmod")
+                changefreq = (url.find("sm:changefreq", ns)
+                              if ns else url.find("changefreq"))
+                priority = (url.find("sm:priority", ns)
+                            if ns else url.find("priority"))
 
-                rows.append(
-                    {
-                        "Type": "URL",
-                        "Location": loc.text if loc is not None else "",
-                        "Last Modified": lastmod.text if lastmod is not None else "",
-                        "Change Frequency": changefreq.text if changefreq is not None else "",
-                        "Priority": priority.text if priority is not None else "",
-                    }
-                )
+                rows.append({
+                    "Type":
+                    "URL",
+                    "Location":
+                    loc.text if loc is not None else "",
+                    "Last Modified":
+                    lastmod.text if lastmod is not None else "",
+                    "Change Frequency":
+                    changefreq.text if changefreq is not None else "",
+                    "Priority":
+                    priority.text if priority is not None else "",
+                })
 
                 url_count += 1
 
@@ -151,41 +143,36 @@ class Module(BaseModule):
 
         elif root.tag.endswith("sitemapindex"):
 
-            maps = (
-                root.findall("sm:sitemap", ns)
-                if ns else
-                root.findall("sitemap")
-            )
+            maps = (root.findall("sm:sitemap", ns)
+                    if ns else root.findall("sitemap"))
 
             for sm in maps:
 
                 loc = sm.find("sm:loc", ns) if ns else sm.find("loc")
-                lastmod = (
-                    sm.find("sm:lastmod", ns)
-                    if ns else
-                    sm.find("lastmod")
-                )
+                lastmod = (sm.find("sm:lastmod", ns)
+                           if ns else sm.find("lastmod"))
 
-                rows.append(
-                    {
-                        "Type": "Sitemap",
-                        "Location": loc.text if loc is not None else "",
-                        "Last Modified": lastmod.text if lastmod is not None else "",
-                        "Change Frequency": "",
-                        "Priority": "",
-                    }
-                )
+                rows.append({
+                    "Type":
+                    "Sitemap",
+                    "Location":
+                    loc.text if loc is not None else "",
+                    "Last Modified":
+                    lastmod.text if lastmod is not None else "",
+                    "Change Frequency":
+                    "",
+                    "Priority":
+                    "",
+                })
 
                 sitemap_count += 1
 
         if url_count == 0 and sitemap_count == 0:
             self.deduct(15)
 
-        description = (
-            f"Detected at {location} | "
-            f"{url_count} URLs | "
-            f"{sitemap_count} Nested Sitemap(s)"
-        )
+        description = (f"Detected at {location} | "
+                       f"{url_count} URLs | "
+                       f"{sitemap_count} Nested Sitemap(s)")
 
         self.add_report(
             scanner,

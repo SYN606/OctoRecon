@@ -62,7 +62,8 @@ class Module(BaseModule):
         csp_headers = [h for h in csp_headers if h]
         csp = "; ".join(csp_headers) if csp_headers else None
 
-        report_only = response.headers.get("Content-Security-Policy-Report-Only")
+        report_only = response.headers.get(
+            "Content-Security-Policy-Report-Only")
 
         if not csp:
             table = Table(title="Content Security Policy")
@@ -165,43 +166,35 @@ class Module(BaseModule):
         for directive, values in sorted(directives.items()):
             value_str = " ".join(sorted(values)) if values else "(no value)"
             if len(value_str) > self.MAX_VALUE_DISPLAY_LEN:
-                value_str = value_str[: self.MAX_VALUE_DISPLAY_LEN] + "..."
+                value_str = value_str[:self.MAX_VALUE_DISPLAY_LEN] + "..."
 
-            rows.append(
-                {
-                    "Directive": directive,
-                    "Values": value_str,
-                    "Status": "OK",
-                }
-            )
+            rows.append({
+                "Directive": directive,
+                "Values": value_str,
+                "Status": "OK",
+            })
 
         for directive in missing:
-            rows.append(
-                {
-                    "Directive": directive,
-                    "Values": "-",
-                    "Status": "Missing",
-                }
-            )
+            rows.append({
+                "Directive": directive,
+                "Values": "-",
+                "Status": "Missing",
+            })
 
         for finding in findings:
-            rows.append(
-                {
-                    "Directive": "Security Finding",
-                    "Values": finding,
-                    "Status": "Warning",
-                }
-            )
+            rows.append({
+                "Directive": "Security Finding",
+                "Values": finding,
+                "Status": "Warning",
+            })
 
         # ----------------------------------
         # Build Description
         # ----------------------------------
 
-        description = (
-            f"{len(directives)} directive(s), "
-            f"{len(findings)} warning(s), "
-            f"{len(missing)} missing directive(s)."
-        )
+        description = (f"{len(directives)} directive(s), "
+                       f"{len(findings)} warning(s), "
+                       f"{len(missing)} missing directive(s).")
 
         # ----------------------------------
         # Severity Tiering
@@ -209,8 +202,7 @@ class Module(BaseModule):
 
         critical_markers = {"'unsafe-inline'", "'unsafe-eval'"}
         has_critical = any(
-            any(marker in f for marker in critical_markers) for f in findings
-        )
+            any(marker in f for marker in critical_markers) for f in findings)
 
         if has_critical:
             status = "Critical"
@@ -272,7 +264,8 @@ class Module(BaseModule):
                     items=findings,
                     score=0,
                     max_score=0,
-                    description=f"{len(findings)} potentially insecure CSP configuration(s) detected.",
+                    description=
+                    f"{len(findings)} potentially insecure CSP configuration(s) detected.",
                 ),
             )
 
@@ -288,6 +281,7 @@ class Module(BaseModule):
                     items=missing,
                     score=0,
                     max_score=0,
-                    description="Recommended CSP directives that are not configured.",
+                    description=
+                    "Recommended CSP directives that are not configured.",
                 ),
             )

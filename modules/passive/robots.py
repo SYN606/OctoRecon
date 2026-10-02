@@ -14,9 +14,7 @@ class Module(BaseModule):
     name = "robots"
     category = "Passive"
 
-    description = (
-        "Analyze robots.txt configuration."
-    )
+    description = ("Analyze robots.txt configuration.")
 
     SENSITIVE_KEYWORDS = [
         "admin",
@@ -82,7 +80,8 @@ class Module(BaseModule):
                 scanner,
                 Report.text(
                     title="robots.txt",
-                    content=f"robots.txt not found (HTTP {response.status_code})",
+                    content=
+                    f"robots.txt not found (HTTP {response.status_code})",
                     score=10,
                     max_score=self.max_score,
                     description="Target does not expose robots.txt.",
@@ -159,11 +158,9 @@ class Module(BaseModule):
                     "Value": line.split(":", 1)[1].strip(),
                 })
 
-        description = (
-            f"{allow} Allow, "
-            f"{disallow} Disallow, "
-            f"{len(sitemaps)} Sitemap(s)"
-        )
+        description = (f"{allow} Allow, "
+                       f"{disallow} Disallow, "
+                       f"{len(sitemaps)} Sitemap(s)")
 
         self.add_report(
             scanner,

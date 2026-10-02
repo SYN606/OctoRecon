@@ -44,10 +44,18 @@ class Module(BaseModule):
     EXPIRY_WARN_DAYS = 30
 
     FIELDS = [
-        "registrar", "registrar_url", "whois_server",
-        "creation_date", "expiration_date", "updated_date",
-        "name", "name_servers", "status", "dnssec",
-        "registrant_country", "emails",
+        "registrar",
+        "registrar_url",
+        "whois_server",
+        "creation_date",
+        "expiration_date",
+        "updated_date",
+        "name",
+        "name_servers",
+        "status",
+        "dnssec",
+        "registrant_country",
+        "emails",
     ]
 
     async def run(self, scanner):
@@ -66,7 +74,10 @@ class Module(BaseModule):
                 self.name,
                 Report.keyvalue(
                     title="WHOIS",
-                    data={"Status": "Unavailable", "Error": "python-whois package not installed"},
+                    data={
+                        "Status": "Unavailable",
+                        "Error": "python-whois package not installed"
+                    },
                     score=0,
                     max_score=max_score,
                     description="WHOIS lookup could not be performed.",
@@ -77,7 +88,12 @@ class Module(BaseModule):
         hostname = urlparse(scanner.target).hostname
 
         if not hostname or self._is_ip_or_local(hostname):
-            data = {"Status": "Skipped", "Reason": "Target is an IP address or localhost, not a registrable domain"}
+            data = {
+                "Status":
+                "Skipped",
+                "Reason":
+                "Target is an IP address or localhost, not a registrable domain"
+            }
             table.add_row("Status", "Skipped")
             table.add_row("Reason", data["Reason"])
             scanner.console.print(table)
@@ -101,7 +117,8 @@ class Module(BaseModule):
 
         try:
             info = await asyncio.wait_for(
-                asyncio.get_event_loop().run_in_executor(None, whois.whois, domain),
+                asyncio.get_event_loop().run_in_executor(
+                    None, whois.whois, domain),
                 timeout=self.WHOIS_TIMEOUT,
             )
 
@@ -118,7 +135,9 @@ class Module(BaseModule):
 
         except asyncio.TimeoutError:
             score = 0
-            data = {"Error": f"WHOIS lookup timed out after {self.WHOIS_TIMEOUT}s"}
+            data = {
+                "Error": f"WHOIS lookup timed out after {self.WHOIS_TIMEOUT}s"
+            }
             table.add_row("Error", data["Error"])
 
         except Exception as e:
@@ -186,5 +205,6 @@ class Module(BaseModule):
         if days_left < 0:
             return 0, f"Domain expiration date has passed ({expiry.date()})"
         if days_left <= self.EXPIRY_WARN_DAYS:
-            return max(score - 10, 0), f"Domain expires soon: {days_left} day(s) left"
+            return max(score - 10,
+                       0), f"Domain expires soon: {days_left} day(s) left"
         return score, None

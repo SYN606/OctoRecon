@@ -21,9 +21,7 @@ class Module(BaseModule):
     name = "wayback"
     category = "Passive"
 
-    description = (
-        "Collect archived URLs from Wayback Machine."
-    )
+    description = ("Collect archived URLs from Wayback Machine.")
 
     MAX_RESULTS = 5000
 
@@ -62,16 +60,14 @@ class Module(BaseModule):
 
         path = parsed.path.rstrip("/")
 
-        return urlunparse(
-            (
-                scheme,
-                parsed.netloc.lower(),
-                path,
-                "",
-                parsed.query,
-                "",
-            )
-        )
+        return urlunparse((
+            scheme,
+            parsed.netloc.lower(),
+            path,
+            "",
+            parsed.query,
+            "",
+        ))
 
     def add_result(
         self,
@@ -101,14 +97,12 @@ class Module(BaseModule):
 
     async def fetch_wayback(self, scanner):
 
-        api = (
-            "https://web.archive.org/cdx/search/cdx"
-            f"?url={self.domain}/*"
-            "&output=json"
-            "&fl=original,timestamp,statuscode,mimetype"
-            "&collapse=urlkey"
-            "&filter=statuscode:200"
-        )
+        api = ("https://web.archive.org/cdx/search/cdx"
+               f"?url={self.domain}/*"
+               "&output=json"
+               "&fl=original,timestamp,statuscode,mimetype"
+               "&collapse=urlkey"
+               "&filter=statuscode:200")
 
         try:
 
@@ -161,9 +155,7 @@ class Module(BaseModule):
 
         self.results.clear()
 
-        self.domain = self.extract_domain(
-            scanner.target
-        )
+        self.domain = self.extract_domain(scanner.target)
 
         if not self.domain:
 
@@ -173,9 +165,7 @@ class Module(BaseModule):
 
         if len(self.results) > self.MAX_RESULTS:
 
-            self.results = dict(
-                list(self.results.items())[: self.MAX_RESULTS]
-            )
+            self.results = dict(list(self.results.items())[:self.MAX_RESULTS])
 
     # =====================================================
     # Categorization
@@ -226,9 +216,7 @@ class Module(BaseModule):
         ".pptx",
     )
 
-    JS_EXTENSIONS = (
-        ".js",
-    )
+    JS_EXTENSIONS = (".js", )
 
     def categorize_url(self, url):
 
@@ -274,14 +262,14 @@ class Module(BaseModule):
             return "High"
 
         if category in (
-            "Admin",
-            "API",
+                "Admin",
+                "API",
         ):
             return "Medium"
 
         if category in (
-            "Login",
-            "Parameter",
+                "Login",
+                "Parameter",
         ):
             return "Low"
 
@@ -319,14 +307,12 @@ class Module(BaseModule):
 
             summary[category] += 1
 
-            rows.append(
-                {
-                    "URL": url,
-                    "Category": category,
-                    "Risk": risk,
-                    "Timestamp": info["timestamp"],
-                }
-            )
+            rows.append({
+                "URL": url,
+                "Category": category,
+                "Risk": risk,
+                "Timestamp": info["timestamp"],
+            })
 
         return rows, summary
 
@@ -390,26 +376,19 @@ class Module(BaseModule):
 
         for label, count in labels:
 
-            scanner.console.print(
-                f"{label.ljust(width)} : {count}"
-            )
+            scanner.console.print(f"{label.ljust(width)} : {count}")
 
         top_rows = sorted(
-
             rows,
-
             key=lambda row: (
                 self.RISK_PRIORITY.get(row["Risk"], 99),
                 row["URL"],
             ),
-
         )[:DISPLAY_LIMIT]
 
         shown = len(top_rows)
 
-        scanner.console.print(
-            f"\nTop Findings ({shown}/{total})"
-        )
+        scanner.console.print(f"\nTop Findings ({shown}/{total})")
 
         table = Table()
 
@@ -429,9 +408,7 @@ class Module(BaseModule):
 
         scanner.console.print(table)
 
-        scanner.console.print(
-            f"\nShowing {shown} of {total} historical URLs."
-        )
+        scanner.console.print(f"\nShowing {shown} of {total} historical URLs.")
 
     # =====================================================
     # Run Module
@@ -449,34 +426,22 @@ class Module(BaseModule):
 
         self.calculate_score()
 
-        description = (
-            f"Collected {len(self.results)} unique historical URLs "
-            "from the Internet Archive Wayback Machine."
-        )
+        description = (f"Collected {len(self.results)} unique historical URLs "
+                       "from the Internet Archive Wayback Machine.")
 
         scanner.report.add_module(
-
             self.name,
-
             Report.table(
-
                 title="Wayback Machine",
-
                 columns=[
                     "URL",
                     "Category",
                     "Risk",
                     "Timestamp",
                 ],
-
                 rows=rows,
-
                 description=description,
-
                 score=self.score,
-
                 max_score=self.max_score,
-
             ),
-
         )

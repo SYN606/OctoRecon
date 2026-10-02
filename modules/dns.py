@@ -20,9 +20,7 @@ class DNSScanner(BaseModule):
 
     category = "Core"
 
-    description = (
-        "Retrieve DNS records and DNS configuration."
-    )
+    description = ("Retrieve DNS records and DNS configuration.")
 
     # How many points a "found" record type is worth
     RECORD_TYPES = ["A", "AAAA", "MX", "NS", "TXT", "SOA", "CNAME", "CAA"]
@@ -44,7 +42,7 @@ class DNSScanner(BaseModule):
                     score=0,
                     max_score=30,
                     description="DNS record enumeration for the target domain. "
-                                 "Skipped: invalid hostname.",
+                    "Skipped: invalid hostname.",
                 ),
             )
             return
@@ -58,7 +56,8 @@ class DNSScanner(BaseModule):
         table.add_column("Values")
 
         rows = []
-        raw_records = {}  # record_type -> list[str] values, for scoring logic below
+        raw_records = {
+        }  # record_type -> list[str] values, for scoring logic below
 
         score = 0
         max_score = 30  # base records (5x5=25) + CAA bonus(5) reserved below; see comments
@@ -86,16 +85,17 @@ class DNSScanner(BaseModule):
 
             raw_records[record] = values
 
-            display_value = "\n".join(values) if values else (status_note or "-")
+            display_value = "\n".join(values) if values else (status_note
+                                                              or "-")
 
             table.add_row(record, display_value)
 
-            rows.append(
-                {
-                    "Record Type": record,
-                    "Values": ", ".join(values) if values else (status_note or "-"),
-                }
-            )
+            rows.append({
+                "Record Type":
+                record,
+                "Values":
+                ", ".join(values) if values else (status_note or "-"),
+            })
 
         # --- Scoring ---
         # Core records: A/AAAA/MX/NS/TXT/SOA/CNAME presence -> up to 3.5 pts each (25 total)
@@ -129,8 +129,14 @@ class DNSScanner(BaseModule):
         table.add_row("SPF", spf_status)
         table.add_row("DMARC", dmarc_status)
 
-        rows.append({"Record Type": "SPF", "Values": "Found" if spf_found else "Missing"})
-        rows.append({"Record Type": "DMARC", "Values": "Found" if dmarc_found else "Missing"})
+        rows.append({
+            "Record Type": "SPF",
+            "Values": "Found" if spf_found else "Missing"
+        })
+        rows.append({
+            "Record Type": "DMARC",
+            "Values": "Found" if dmarc_found else "Missing"
+        })
 
         scanner.console.print(table)
 
@@ -146,6 +152,6 @@ class DNSScanner(BaseModule):
                 score=score,
                 max_score=max_score,
                 description="DNS record enumeration for the target domain, "
-                            "including SPF/DMARC and CAA checks.",
+                "including SPF/DMARC and CAA checks.",
             ),
         )

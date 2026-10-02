@@ -15,9 +15,7 @@ class RedirectScanner(BaseModule):
     name = "Redirects"
     category = "Web"
 
-    description = (
-        "Analyze HTTP redirects and redirect chains."
-    )
+    description = ("Analyze HTTP redirects and redirect chains.")
 
     async def run(self, scanner):
 
@@ -40,12 +38,10 @@ class RedirectScanner(BaseModule):
                 scanner.target,
             )
 
-            rows.append(
-                {
-                    "Status": "No Redirect",
-                    "URL": scanner.target,
-                }
-            )
+            rows.append({
+                "Status": "No Redirect",
+                "URL": scanner.target,
+            })
 
         else:
 
@@ -56,12 +52,10 @@ class RedirectScanner(BaseModule):
                     str(item.url),
                 )
 
-                rows.append(
-                    {
-                        "Status": str(item.status_code),
-                        "URL": str(item.url),
-                    }
-                )
+                rows.append({
+                    "Status": str(item.status_code),
+                    "URL": str(item.url),
+                })
 
             # Multiple redirects reduce score slightly
             score = max(0, score - len(history))
@@ -72,12 +66,10 @@ class RedirectScanner(BaseModule):
             str(scanner.response.url),
         )
 
-        rows.append(
-            {
-                "Status": str(scanner.response.status_code),
-                "URL": str(scanner.response.url),
-            }
-        )
+        rows.append({
+            "Status": str(scanner.response.status_code),
+            "URL": str(scanner.response.url),
+        })
 
         scanner.console.print(table)
 
@@ -92,6 +84,7 @@ class RedirectScanner(BaseModule):
                 rows=rows,
                 score=score,
                 max_score=max_score,
-                description="HTTP redirect chain followed before reaching the final response.",
+                description=
+                "HTTP redirect chain followed before reaching the final response.",
             ),
         )

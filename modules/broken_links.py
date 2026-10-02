@@ -37,7 +37,6 @@ SOCIAL_DOMAINS = {
     "wa.me",
 }
 
-
 DOCUMENT_EXTENSIONS = (
     ".pdf",
     ".doc",
@@ -51,7 +50,6 @@ DOCUMENT_EXTENSIONS = (
     ".7z",
 )
 
-
 IMAGE_EXTENSIONS = (
     ".png",
     ".jpg",
@@ -63,15 +61,9 @@ IMAGE_EXTENSIONS = (
     ".ico",
 )
 
+CSS_EXTENSIONS = (".css", )
 
-CSS_EXTENSIONS = (
-    ".css",
-)
-
-
-JS_EXTENSIONS = (
-    ".js",
-)
+JS_EXTENSIONS = (".js", )
 
 
 class LinkExtractor:
@@ -93,12 +85,8 @@ class LinkExtractor:
 
         url = url.strip()
 
-        if (
-            url.startswith("#")
-            or url.startswith("javascript:")
-            or url.startswith("mailto:")
-            or url.startswith("tel:")
-        ):
+        if (url.startswith("#") or url.startswith("javascript:")
+                or url.startswith("mailto:") or url.startswith("tel:")):
             return None
 
         return urljoin(
@@ -114,10 +102,7 @@ class LinkExtractor:
 
         path = parsed.path.lower()
 
-        if any(
-            host.endswith(domain)
-            for domain in SOCIAL_DOMAINS
-        ):
+        if any(host.endswith(domain) for domain in SOCIAL_DOMAINS):
             return "social"
 
         if path.endswith(IMAGE_EXTENSIONS):
@@ -142,15 +127,10 @@ class LinkExtractor:
         links = []
 
         selectors = [
-
             ("a", "href"),
-
             ("img", "src"),
-
             ("script", "src"),
-
             ("link", "href"),
-
         ]
 
         for tag, attribute in selectors:
@@ -164,12 +144,10 @@ class LinkExtractor:
                 if not url:
                     continue
 
-                links.append(
-                    {
-                        "url": url,
-                        "type": self.categorize(url),
-                    }
-                )
+                links.append({
+                    "url": url,
+                    "type": self.categorize(url),
+                })
 
         unique = []
 
@@ -245,9 +223,7 @@ class LinkChecker:
 
             result["response_time"] = elapsed
 
-            result["redirects"] = len(
-                response.history
-            )
+            result["redirects"] = len(response.history)
 
             result["content_type"] = response.headers.get(
                 "Content-Type",
@@ -337,8 +313,7 @@ class BrokenLinkScanner(BaseModule):
     category = "Web"
 
     description = (
-        "Check internal, external and static resource links for availability."
-    )
+        "Check internal, external and static resource links for availability.")
 
     async def run(self, scanner):
 
@@ -351,9 +326,7 @@ class BrokenLinkScanner(BaseModule):
 
         links = extractor.extract()
 
-        checker = LinkChecker(
-            scanner.client.client
-        )
+        checker = LinkChecker(scanner.client.client)
 
         table = Table(title="Broken Links Found")
 
@@ -416,11 +389,8 @@ class BrokenLinkScanner(BaseModule):
                 result["type"],
                 status_text,
                 str(result["status_code"]),
-                (
-                    f"{result['response_time']} ms"
-                    if result["response_time"]
-                    else "-"
-                ),
+                (f"{result['response_time']} ms"
+                 if result["response_time"] else "-"),
                 result["url"],
             )
 
@@ -430,13 +400,9 @@ class BrokenLinkScanner(BaseModule):
 
         else:
 
-            scanner.console.print(
-                "[green]No broken links found.[/green]"
-            )
+            scanner.console.print("[green]No broken links found.[/green]")
 
-        summary_table = Table(
-            title="Broken Link Summary"
-        )
+        summary_table = Table(title="Broken Link Summary")
 
         summary_table.add_column("Category")
         summary_table.add_column("Count")
@@ -459,20 +425,17 @@ class BrokenLinkScanner(BaseModule):
         rows = []
 
         for item in results:
+            if not item.get("broken"):
+                continue
 
-            rows.append(
-                {
-                    "Type": item["type"],
-                    "Status": item["status"],
-                    "HTTP Code": item["status_code"],
-                    "Response Time": (
-                        f"{item['response_time']} ms"
-                        if item["response_time"]
-                        else "-"
-                    ),
-                    "URL": item["url"],
-                }
-            )
+            rows.append({
+                "Type": item["type"],
+                "Status": item["status"],
+                "HTTP Code": item["status_code"],
+                "Response Time": (f"{item['response_time']} ms"
+                                  if item["response_time"] else "-"),
+                "URL": item["url"],
+            })
 
         scanner.report.add_module(
             self.name,
@@ -488,6 +451,7 @@ class BrokenLinkScanner(BaseModule):
                 rows=rows,
                 score=max(score, 0),
                 max_score=max_score,
-                description="Checks internal, external and static resource links for availability.",
+                description=
+                "Checks internal, external and static resource links for availability.",
             ),
         )

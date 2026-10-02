@@ -15,9 +15,7 @@ class Module(BaseModule):
     name = "securitytxt"
     category = "Passive"
 
-    description = (
-        "Analyze RFC 9116 security.txt policy."
-    )
+    description = ("Analyze RFC 9116 security.txt policy.")
 
     LOCATIONS = [
         "/.well-known/security.txt",
@@ -72,10 +70,8 @@ class Module(BaseModule):
                 text = r.text.strip()
 
                 # Reject HTML pages
-                if (
-                    "<html" in text.lower()
-                    or "<!doctype html" in text.lower()
-                ):
+                if ("<html" in text.lower()
+                        or "<!doctype html" in text.lower()):
                     continue
 
                 response = r
@@ -100,7 +96,8 @@ class Module(BaseModule):
                     content="security.txt not found.",
                     score=10,
                     max_score=self.max_score,
-                    description="RFC 9116 security policy file was not detected.",
+                    description=
+                    "RFC 9116 security policy file was not detected.",
                 ),
             )
 
@@ -131,12 +128,10 @@ class Module(BaseModule):
 
             fields.setdefault(lower, []).append(value)
 
-            rows.append(
-                {
-                    "Field": key,
-                    "Value": value,
-                }
-            )
+            rows.append({
+                "Field": key,
+                "Value": value,
+            })
 
         for field in self.REQUIRED_FIELDS:
 
@@ -148,10 +143,8 @@ class Module(BaseModule):
             if field not in fields:
                 self.deduct(1)
 
-        description = (
-            f"Detected at {location} "
-            f"with {len(fields)} field(s)."
-        )
+        description = (f"Detected at {location} "
+                       f"with {len(fields)} field(s).")
 
         self.add_report(
             scanner,
@@ -177,10 +170,8 @@ class Module(BaseModule):
             ],
             rows=rows,
             limit=10,
-            footer=(
-                f"Showing {min(len(rows), 10)} of {len(rows)} entries.\n"
-                "See HTML/JSON report for complete security.txt."
-            ),
+            footer=(f"Showing {min(len(rows), 10)} of {len(rows)} entries.\n"
+                    "See HTML/JSON report for complete security.txt."),
         )
 
         return

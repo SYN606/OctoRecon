@@ -21,9 +21,7 @@ class MethodScanner(BaseModule):
         "http",
     ]
     category = "Web"
-    description = (
-        "Identify supported HTTP methods."
-    )
+    description = ("Identify supported HTTP methods.")
 
     COMMON_METHODS = [
         "GET",
@@ -52,9 +50,9 @@ class MethodScanner(BaseModule):
 
     # Weighted penalty per dangerous method (out of max_score=20)
     DANGEROUS_WEIGHTS = {
-        "TRACE": 8,      # Cross-Site Tracing (XST) risk
-        "PUT": 5,        # arbitrary file write
-        "DELETE": 5,     # arbitrary file delete
+        "TRACE": 8,  # Cross-Site Tracing (XST) risk
+        "PUT": 5,  # arbitrary file write
+        "DELETE": 5,  # arbitrary file delete
         "CONNECT": 4,
     }
 
@@ -81,13 +79,11 @@ class MethodScanner(BaseModule):
         except httpx.RequestError as e:
             request_failed = True
             scanner.console.print(
-                f"[yellow]HTTP Methods module: request failed ({e}).[/yellow]"
-            )
+                f"[yellow]HTTP Methods module: request failed ({e}).[/yellow]")
         else:
             allow = response.headers.get("Allow", "") if response else ""
             methods = [
-                method.strip().upper()
-                for method in allow.split(",")
+                method.strip().upper() for method in allow.split(",")
                 if method.strip()
             ]
 
@@ -101,7 +97,7 @@ class MethodScanner(BaseModule):
                     score=0,
                     max_score=max_score,
                     description="Enumerates supported HTTP methods. "
-                                "Skipped: OPTIONS request failed.",
+                    "Skipped: OPTIONS request failed.",
                 ),
             )
             return
@@ -121,15 +117,14 @@ class MethodScanner(BaseModule):
             table.add_row(
                 method,
                 f"[green]{status}[/green]" if enabled and "risk" not in status
-                else (f"[red]{status}[/red]" if enabled else f"[dim]{status}[/dim]"),
+                else (f"[red]{status}[/red]"
+                      if enabled else f"[dim]{status}[/dim]"),
             )
 
-            rows.append(
-                {
-                    "Method": method,
-                    "Status": status,
-                }
-            )
+            rows.append({
+                "Method": method,
+                "Status": status,
+            })
 
         # --- Unlisted / WebDAV methods that showed up in Allow header ---
         extra_found = [m for m in methods if m not in self.COMMON_METHODS]
@@ -164,7 +159,8 @@ class MethodScanner(BaseModule):
                 rows=rows,
                 score=score,
                 max_score=max_score,
-                description="Enumerates supported HTTP methods, flags TRACE (XST risk), "
-                            "and highlights unlisted/WebDAV methods found in the Allow header.",
+                description=
+                "Enumerates supported HTTP methods, flags TRACE (XST risk), "
+                "and highlights unlisted/WebDAV methods found in the Allow header.",
             ),
         )

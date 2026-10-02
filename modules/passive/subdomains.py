@@ -24,9 +24,7 @@ class Module(BaseModule):
     name = "subdomains"
     category = "Passive"
 
-    description = (
-        "Discover public subdomains."
-    )
+    description = ("Discover public subdomains.")
 
     MAX_RESULTS = 500
 
@@ -137,9 +135,7 @@ class Module(BaseModule):
 
             # Target likely has no scheme — retry as "//target"
             # so urlparse treats it as a netloc instead of a path.
-            hostname = urlparse(
-                "//" + target.strip("/")
-            ).hostname
+            hostname = urlparse("//" + target.strip("/")).hostname
 
         hostname = (hostname or "").lower().strip(".")
 
@@ -253,10 +249,8 @@ class Module(BaseModule):
                 self._set_status(
                     source_name,
                     "rate_limited",
-                    detail=(
-                        "rate limited (429) — reduce scan frequency "
-                        "or add a delay between runs against this target"
-                    ),
+                    detail=("rate limited (429) — reduce scan frequency "
+                            "or add a delay between runs against this target"),
                 )
                 return None
 
@@ -270,11 +264,9 @@ class Module(BaseModule):
 
     async def fetch_crtsh(self, scanner):
 
-        url = (
-            f"https://crt.sh/"
-            f"?q=%25.{self.domain}"
-            f"&output=json"
-        )
+        url = (f"https://crt.sh/"
+               f"?q=%25.{self.domain}"
+               f"&output=json")
 
         response = await self._get_with_retry(
             scanner,
@@ -330,10 +322,8 @@ class Module(BaseModule):
 
     async def fetch_bufferover(self, scanner):
 
-        url = (
-            "https://dns.bufferover.run/"
-            f"dns?q=.{self.domain}"
-        )
+        url = ("https://dns.bufferover.run/"
+               f"dns?q=.{self.domain}")
 
         response = await self._get_with_retry(
             scanner,
@@ -370,12 +360,12 @@ class Module(BaseModule):
         found = 0
 
         for section in (
-            "FDNS_A",
-            "RDNS",
+                "FDNS_A",
+                "RDNS",
         ):
 
             for item in data.get(
-                section,
+                    section,
                 [],
             ):
 
@@ -402,11 +392,9 @@ class Module(BaseModule):
 
     async def fetch_rapiddns(self, scanner):
 
-        url = (
-            f"https://rapiddns.io/subdomain/"
-            f"{self.domain}"
-            "?full=1"
-        )
+        url = (f"https://rapiddns.io/subdomain/"
+               f"{self.domain}"
+               "?full=1")
 
         response = await self._get_with_retry(
             scanner,
@@ -449,10 +437,8 @@ class Module(BaseModule):
 
     async def fetch_otx(self, scanner):
 
-        url = (
-            "https://otx.alienvault.com/api/v1/"
-            f"indicators/domain/{self.domain}/passive_dns"
-        )
+        url = ("https://otx.alienvault.com/api/v1/"
+               f"indicators/domain/{self.domain}/passive_dns")
 
         response = await self._get_with_retry(
             scanner,
@@ -489,13 +475,11 @@ class Module(BaseModule):
         found = 0
 
         for record in data.get(
-            "passive_dns",
+                "passive_dns",
             [],
         ):
 
-            host = record.get(
-                "hostname"
-            )
+            host = record.get("hostname")
 
             if host:
 
@@ -514,10 +498,8 @@ class Module(BaseModule):
 
     async def fetch_hackertarget(self, scanner):
 
-        url = (
-            "https://api.hackertarget.com/hostsearch/"
-            f"?q={self.domain}"
-        )
+        url = ("https://api.hackertarget.com/hostsearch/"
+               f"?q={self.domain}")
 
         response = await self._get_with_retry(
             scanner,
@@ -574,11 +556,9 @@ class Module(BaseModule):
 
     async def fetch_certspotter(self, scanner):
 
-        url = (
-            "https://api.certspotter.com/v1/issuances"
-            f"?domain={self.domain}"
-            "&include_subdomains=true&expand=dns_names"
-        )
+        url = ("https://api.certspotter.com/v1/issuances"
+               f"?domain={self.domain}"
+               "&include_subdomains=true&expand=dns_names")
 
         response = await self._get_with_retry(
             scanner,
@@ -682,11 +662,9 @@ class Module(BaseModule):
 
     async def fetch_wayback(self, scanner):
 
-        url = (
-            "https://web.archive.org/cdx/search/cdx"
-            f"?url=*.{self.domain}"
-            "&output=json&fl=original&collapse=urlkey"
-        )
+        url = ("https://web.archive.org/cdx/search/cdx"
+               f"?url=*.{self.domain}"
+               "&output=json&fl=original&collapse=urlkey")
 
         response = await self._get_with_retry(
             scanner,
@@ -750,10 +728,8 @@ class Module(BaseModule):
 
     async def fetch_urlscan(self, scanner):
 
-        url = (
-            "https://urlscan.io/api/v1/search/"
-            f"?q=domain:{self.domain}"
-        )
+        url = ("https://urlscan.io/api/v1/search/"
+               f"?q=domain:{self.domain}")
 
         response = await self._get_with_retry(
             scanner,
@@ -791,9 +767,7 @@ class Module(BaseModule):
 
         for result in data.get("results", []):
 
-            host = (
-                result.get("page", {}).get("domain")
-            )
+            host = (result.get("page", {}).get("domain"))
 
             if host:
 
@@ -812,10 +786,8 @@ class Module(BaseModule):
 
     async def fetch_threatminer(self, scanner):
 
-        url = (
-            "https://api.threatminer.org/v2/domain.php"
-            f"?q={self.domain}&rt=5"
-        )
+        url = ("https://api.threatminer.org/v2/domain.php"
+               f"?q={self.domain}&rt=5")
 
         response = await self._get_with_retry(
             scanner,
@@ -893,10 +865,7 @@ class Module(BaseModule):
             return await fetcher(scanner)
 
         results = await asyncio.gather(
-            *(
-                staggered(i, fetcher)
-                for i, fetcher in enumerate(fetchers)
-            ),
+            *(staggered(i, fetcher) for i, fetcher in enumerate(fetchers)),
             return_exceptions=True,
         )
 
@@ -911,8 +880,7 @@ class Module(BaseModule):
                 )
 
                 scanner.console.print(
-                    f"[yellow][!] {source}: {result}[/yellow]"
-                )
+                    f"[yellow][!] {source}: {result}[/yellow]")
 
     # =====================================================
     # Resolve IP
@@ -925,19 +893,12 @@ class Module(BaseModule):
             loop = asyncio.get_running_loop()
 
             result = await asyncio.wait_for(
-
                 loop.getaddrinfo(
-
                     hostname,
-
                     None,
-
                     family=socket.AF_UNSPEC,
-
                 ),
-
                 timeout=self.DNS_TIMEOUT,
-
             )
 
             if result:
@@ -1025,30 +986,18 @@ class Module(BaseModule):
                 ip = await self.resolve_ip(host)
 
                 alive = await self.check_alive(
-
                     scanner,
-
                     host,
-
                 )
 
             self.results[host]["ip"] = ip
             self.results[host]["alive"] = alive
 
-        tasks = [
-
-            worker(host)
-
-            for host in self.results
-
-        ]
+        tasks = [worker(host) for host in self.results]
 
         await asyncio.gather(
-
             *tasks,
-
             return_exceptions=True,
-
         )
 
     # =====================================================
@@ -1079,29 +1028,12 @@ class Module(BaseModule):
 
                 dead += 1
 
-            rows.append(
-
-                {
-
-                    "Subdomain": host,
-
-                    "IP": info["ip"],
-
-                    "Status": status,
-
-                    "Source": ", ".join(
-
-                        sorted(
-
-                            info["sources"]
-
-                        )
-
-                    ),
-
-                }
-
-            )
+            rows.append({
+                "Subdomain": host,
+                "IP": info["ip"],
+                "Status": status,
+                "Source": ", ".join(sorted(info["sources"])),
+            })
 
         return rows, alive, dead
 
@@ -1147,25 +1079,16 @@ class Module(BaseModule):
 
         self.results.clear()
 
-        self.domain = self.extract_root_domain(
-
-            scanner.target
-
-        )
+        self.domain = self.extract_root_domain(scanner.target)
 
         if not self.domain:
 
             scanner.console.print(
                 "[bold red][!] Could not determine root domain "
-                "for subdomain enumeration.[/bold red]"
-            )
+                "for subdomain enumeration.[/bold red]")
             return
 
-        await self.collect(
-
-            scanner
-
-        )
+        await self.collect(scanner)
 
         if len(self.results) > self.MAX_RESULTS:
 
@@ -1174,17 +1097,9 @@ class Module(BaseModule):
             # whichever source happened to respond first.
             sorted_items = sorted(self.results.items())
 
-            self.results = dict(
+            self.results = dict(sorted_items[:self.MAX_RESULTS])
 
-                sorted_items[: self.MAX_RESULTS]
-
-            )
-
-        await self.enrich_results(
-
-            scanner
-
-        )
+        await self.enrich_results(scanner)
 
         self.calculate_score()
 
@@ -1230,35 +1145,25 @@ class Module(BaseModule):
 
             for source, detail in self._raw_status.items():
 
-                scanner.console.print(
-                    f"[dim]  {source}: {detail}[/dim]"
-                )
+                scanner.console.print(f"[dim]  {source}: {detail}[/dim]")
 
         if not rows:
 
-            rows.append(
-                {
-                    "Subdomain": "-",
-                    "IP": "-",
-                    "Status": "Not Found",
-                    "Source": "-",
-                }
-            )
+            rows.append({
+                "Subdomain": "-",
+                "IP": "-",
+                "Status": "Not Found",
+                "Source": "-",
+            })
 
-        description = (
-            f"Found {len(self.results)} unique subdomains "
-            f"({alive} Alive, {dead} Dead) "
-            f"using {len(self.SOURCES)} passive sources."
-        )
+        description = (f"Found {len(self.results)} unique subdomains "
+                       f"({alive} Alive, {dead} Dead) "
+                       f"using {len(self.SOURCES)} passive sources.")
 
         failures = [
-
             f"{source}: {status}"
-
             for source, status in self.source_status.items()
-
             if not status.startswith("ok")
-
         ]
 
         if failures:
@@ -1266,28 +1171,18 @@ class Module(BaseModule):
             description += " Issues — " + "; ".join(failures)
 
         scanner.report.add_module(
-
             self.name,
-
             Report.table(
-
                 title="Passive Subdomain Discovery",
-
                 columns=[
                     "Subdomain",
                     "IP",
                     "Status",
                     "Source",
                 ],
-
                 rows=rows,
-
                 description=description,
-
                 score=self.score,
-
                 max_score=self.max_score,
-
             ),
-
         )

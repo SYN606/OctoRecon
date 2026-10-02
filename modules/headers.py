@@ -10,7 +10,6 @@ from config import SECURITY_HEADERS
 from core.base_module import BaseModule
 from core.report_schema import Report
 
-
 # Headers that leak information about the tech stack — being present
 # is a (minor) negative, not neutral.
 INFO_DISCLOSURE_HEADERS = {
@@ -63,16 +62,13 @@ class HeaderScanner(BaseModule):
 
     category = "Core"
 
-    description = (
-        "Analyze HTTP response headers and security headers."
-    )
+    description = ("Analyze HTTP response headers and security headers.")
 
     async def run(self, scanner):
 
         if scanner.response is None:
             scanner.console.print(
-                "[red]Headers module: no response available, skipping.[/red]"
-            )
+                "[red]Headers module: no response available, skipping.[/red]")
             scanner.report.add_module(
                 self.name,
                 Report.table(
@@ -82,7 +78,7 @@ class HeaderScanner(BaseModule):
                     score=0,
                     max_score=sum(SECURITY_HEADERS.values()),
                     description="Checks for recommended HTTP security headers. "
-                                "Skipped: no response.",
+                    "Skipped: no response.",
                 ),
             )
             return
@@ -123,13 +119,11 @@ class HeaderScanner(BaseModule):
 
             table.add_row(header, status_display, value_display)
 
-            rows.append(
-                {
-                    "Header": header,
-                    "Status": status,
-                    "Value": raw_value if raw_value else "-",
-                }
-            )
+            rows.append({
+                "Header": header,
+                "Status": status,
+                "Value": raw_value if raw_value else "-",
+            })
 
         score = min(score, max_score)
 
@@ -146,13 +140,11 @@ class HeaderScanner(BaseModule):
                     "[red]Disclosed[/red]",
                     escape(raw_value),
                 )
-                disclosure_rows.append(
-                    {
-                        "Header": header,
-                        "Status": "Disclosed",
-                        "Value": raw_value,
-                    }
-                )
+                disclosure_rows.append({
+                    "Header": header,
+                    "Status": "Disclosed",
+                    "Value": raw_value,
+                })
 
         rows.extend(disclosure_rows)
         score = max(score - disclosure_penalty, 0)
@@ -172,7 +164,7 @@ class HeaderScanner(BaseModule):
                 score=score,
                 max_score=max_score,
                 description="Checks for recommended HTTP security headers, "
-                            "validates values, and flags info-disclosure headers "
-                            "(Server, X-Powered-By).",
+                "validates values, and flags info-disclosure headers "
+                "(Server, X-Powered-By).",
             ),
         )

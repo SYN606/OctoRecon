@@ -22,9 +22,7 @@ class Module(BaseModule):
     name = "emails"
     category = "Passive"
 
-    description = (
-        "Extract publicly exposed email addresses."
-    )
+    description = ("Extract publicly exposed email addresses.")
 
     EMAIL_REGEX = re.compile(
         r"(?:[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*)@"
@@ -33,7 +31,6 @@ class Module(BaseModule):
     )
 
     OBFUSCATED_PATTERNS = (
-
         (
             re.compile(
                 r"([A-Za-z0-9._%+-]+)\s*\[\s*at\s*\]\s*"
@@ -43,7 +40,6 @@ class Module(BaseModule):
             ),
             "{}@{}.{}",
         ),
-
         (
             re.compile(
                 r"([A-Za-z0-9._%+-]+)\s*\(\s*at\s*\)\s*"
@@ -53,7 +49,6 @@ class Module(BaseModule):
             ),
             "{}@{}.{}",
         ),
-
         (
             re.compile(
                 r"([A-Za-z0-9._%+-]+)\s+at\s+"
@@ -63,101 +58,69 @@ class Module(BaseModule):
             ),
             "{}@{}.{}",
         ),
-
     )
 
     COMMON_PATHS = [
-
         "/",
-
         "/contact",
         "/contact-us",
         "/contacts",
-
         "/about",
         "/about-us",
-
         "/support",
         "/help",
-
         "/privacy",
         "/privacy-policy",
-
         "/terms",
         "/terms-and-conditions",
-
         "/company",
         "/team",
         "/staff",
-
         "/legal",
-
         "/imprint",
-
     ]
 
     GENERIC_PREFIXES = {
-
         "admin",
         "administrator",
-
         "support",
         "help",
-
         "contact",
         "info",
-
         "security",
         "abuse",
-
         "soc",
         "noc",
-
         "billing",
         "sales",
-
         "marketing",
-
         "press",
         "media",
-
         "jobs",
         "career",
         "careers",
-
         "privacy",
         "legal",
-
         "webmaster",
         "postmaster",
         "hostmaster",
-
         "root",
-
         "hr",
-
     }
 
     INVALID_DOMAINS = {
-
         "example.com",
         "example.org",
         "example.net",
-
         "localhost",
-
         "invalid",
-
         "test.com",
-
     }
 
     SEARCH_TAGS = (
-
         ("a", "href"),
         ("script", "src"),
         ("link", "href"),
-
     )
 
     # Safety cap on number of pages crawled per scan.
@@ -227,11 +190,7 @@ class Module(BaseModule):
 
             for i in range(2, len(encoded), 2):
 
-                output += chr(
-
-                    int(encoded[i:i + 2], 16) ^ key
-
-                )
+                output += chr(int(encoded[i:i + 2], 16) ^ key)
 
             return output
 
@@ -255,11 +214,7 @@ class Module(BaseModule):
 
             for match in pattern.findall(text):
 
-                emails.add(
-
-                    fmt.format(*match).lower()
-
-                )
+                emails.add(fmt.format(*match).lower())
 
         return emails
 
@@ -274,11 +229,8 @@ class Module(BaseModule):
             return set()
 
         return {
-
             self.normalize(email)
-
             for email in self.EMAIL_REGEX.findall(text)
-
         }
 
     # =====================================================
@@ -297,11 +249,7 @@ class Module(BaseModule):
 
                 continue
 
-            email = self.normalize(
-
-                href[7:].split("?")[0]
-
-            )
+            email = self.normalize(href[7:].split("?")[0])
 
             if self.is_valid(email):
 
@@ -329,11 +277,7 @@ class Module(BaseModule):
 
             if decoded and self.is_valid(decoded):
 
-                emails.add(
-
-                    self.normalize(decoded)
-
-                )
+                emails.add(self.normalize(decoded))
 
         return emails
 
@@ -345,35 +289,13 @@ class Module(BaseModule):
 
         emails = set()
 
-        comments = soup.find_all(
-
-            string=lambda text:
-
-            isinstance(text, Comment)
-
-        )
+        comments = soup.find_all(string=lambda text: isinstance(text, Comment))
 
         for comment in comments:
 
-            emails.update(
+            emails.update(self.extract_normal(str(comment)))
 
-                self.extract_normal(
-
-                    str(comment)
-
-                )
-
-            )
-
-            emails.update(
-
-                self.extract_obfuscated(
-
-                    str(comment)
-
-                )
-
-            )
+            emails.update(self.extract_obfuscated(str(comment)))
 
         return emails
 
@@ -393,17 +315,9 @@ class Module(BaseModule):
 
             content = script.string or script.text or ""
 
-            emails.update(
+            emails.update(self.extract_normal(content))
 
-                self.extract_normal(content)
-
-            )
-
-            emails.update(
-
-                self.extract_obfuscated(content)
-
-            )
+            emails.update(self.extract_obfuscated(content))
 
         return emails
 
@@ -416,11 +330,8 @@ class Module(BaseModule):
         urls = set()
 
         for script in soup.find_all(
-
-            "script",
-
-            src=True,
-
+                "script",
+                src=True,
         ):
 
             src = script["src"].strip()
@@ -429,17 +340,10 @@ class Module(BaseModule):
 
                 continue
 
-            urls.add(
-
-                urljoin(
-
-                    base_url,
-
-                    src,
-
-                )
-
-            )
+            urls.add(urljoin(
+                base_url,
+                src,
+            ))
 
         return urls
 
@@ -454,65 +358,38 @@ class Module(BaseModule):
         target = urlparse(base_url).netloc
 
         keywords = (
-
             "contact",
-
             "about",
-
             "support",
-
             "help",
-
             "privacy",
-
             "terms",
-
             "company",
-
             "team",
-
             "staff",
-
             "career",
-
             "legal",
-
         )
 
         for tag in soup.find_all(
-
-            "a",
-
-            href=True,
-
+                "a",
+                href=True,
         ):
 
             href = tag["href"].strip()
 
-            if href.startswith(
-
-                (
-
+            if href.startswith((
                     "mailto:",
-
                     "tel:",
-
                     "#",
-
                     "javascript:",
-
-                )
-
-            ):
+            )):
 
                 continue
 
             absolute = urljoin(
-
                 base_url,
-
                 href,
-
             )
 
             parsed = urlparse(absolute)
@@ -523,13 +400,7 @@ class Module(BaseModule):
 
             lower = parsed.path.lower()
 
-            if any(
-
-                key in lower
-
-                for key in keywords
-
-            ):
+            if any(key in lower for key in keywords):
 
                 links.add(absolute)
 
@@ -542,82 +413,33 @@ class Module(BaseModule):
     def extract_html(self, html):
 
         soup = BeautifulSoup(
-
             html,
-
             "html.parser",
-
         )
 
         emails = set()
 
-        emails.update(
+        emails.update(self.extract_normal(html))
 
-            self.extract_normal(html)
+        emails.update(self.extract_obfuscated(html))
 
-        )
+        emails.update(self.extract_normal(soup.get_text(
+            " ",
+            strip=True,
+        )))
 
-        emails.update(
+        emails.update(self.extract_obfuscated(soup.get_text(
+            " ",
+            strip=True,
+        )))
 
-            self.extract_obfuscated(html)
+        emails.update(self.extract_mailto(soup))
 
-        )
+        emails.update(self.extract_comments(soup))
 
-        emails.update(
+        emails.update(self.extract_cfemails(soup))
 
-            self.extract_normal(
-
-                soup.get_text(
-
-                    " ",
-
-                    strip=True,
-
-                )
-
-            )
-
-        )
-
-        emails.update(
-
-            self.extract_obfuscated(
-
-                soup.get_text(
-
-                    " ",
-
-                    strip=True,
-
-                )
-
-            )
-
-        )
-
-        emails.update(
-
-            self.extract_mailto(soup)
-
-        )
-
-        emails.update(
-
-            self.extract_comments(soup)
-
-        )
-
-        emails.update(
-
-            self.extract_cfemails(soup)
-
-        )
-
-        emails.update(
-
-            self.extract_inline_js(soup)
-
-        )
+        emails.update(self.extract_inline_js(soup))
 
         return soup, emails
 
@@ -643,17 +465,10 @@ class Module(BaseModule):
 
         for path in self.COMMON_PATHS:
 
-            queue.append(
-
-                urljoin(
-
-                    scanner.target,
-
-                    path,
-
-                )
-
-            )
+            queue.append(urljoin(
+                scanner.target,
+                path,
+            ))
 
         # ==============================================
         # Crawl (capped at MAX_PAGES, enforced up front so
@@ -677,13 +492,9 @@ class Module(BaseModule):
             try:
 
                 response = await self.get(
-
                     scanner,
-
                     url,
-
                     follow_redirects=True,
-
                 )
 
             except Exception:
@@ -696,11 +507,7 @@ class Module(BaseModule):
 
             html = response.text
 
-            soup, found = self.extract_html(
-
-                html
-
-            )
+            soup, found = self.extract_html(html)
 
             emails.update(found)
 
@@ -709,23 +516,16 @@ class Module(BaseModule):
             # ==========================================
 
             for js_url in self.extract_js_urls(
-
-                soup,
-
-                url,
-
+                    soup,
+                    url,
             ):
 
                 try:
 
                     js = await self.get(
-
                         scanner,
-
                         js_url,
-
                         follow_redirects=True,
-
                     )
 
                 except Exception:
@@ -736,36 +536,17 @@ class Module(BaseModule):
 
                     continue
 
-                emails.update(
+                emails.update(self.extract_normal(js.text))
 
-                    self.extract_normal(
-
-                        js.text
-
-                    )
-
-                )
-
-                emails.update(
-
-                    self.extract_obfuscated(
-
-                        js.text
-
-                    )
-
-                )
+                emails.update(self.extract_obfuscated(js.text))
 
             # ==========================================
             # Internal Links
             # ==========================================
 
             for link in self.discover_links(
-
-                soup,
-
-                url,
-
+                    soup,
+                    url,
             ):
 
                 if link not in visited:
@@ -801,12 +582,8 @@ class Module(BaseModule):
         # ==============================================
         # Classification
         # ==============================================
-        target_domain = (
-            urlparse(scanner.target)
-            .netloc
-            .lower()
-            .removeprefix("www.")
-        )
+        target_domain = (urlparse(
+            scanner.target).netloc.lower().removeprefix("www."))
 
         generic = 0
 
@@ -835,11 +612,8 @@ class Module(BaseModule):
                 personal += 1
 
             rows.append({
-
                 "Email": email,
-
                 "Category": category,
-
             })
         # ==============================================
         # Score Calculation
@@ -870,11 +644,9 @@ class Module(BaseModule):
         # ==============================================
 
         official = len(emails) - personal
-        description = (
-            f"Found {len(emails)} email(s) "
-             f"({official} Official, {personal} Personal) "
-            f"across {len(visited)} page(s)."
-        )
+        description = (f"Found {len(emails)} email(s) "
+                       f"({official} Official, {personal} Personal) "
+                       f"across {len(visited)} page(s).")
 
         # ==============================================
         # Empty Results
@@ -883,11 +655,8 @@ class Module(BaseModule):
         if not rows:
 
             rows.append({
-
                 "Email": "-",
-
                 "Category": "Not Found",
-
             })
 
         # ==============================================
@@ -895,31 +664,18 @@ class Module(BaseModule):
         # ==============================================
 
         scanner.report.add_module(
-
             self.name,
-
             Report.table(
-
                 title="Email Discovery",
-
                 columns=[
-
                     "Email",
-
                     "Category",
-
                 ],
-
                 rows=rows,
-
                 score=self.score,
-
                 max_score=self.max_score,
-
                 description=description,
-
             ),
-
         )
 
         self.print_table(
@@ -930,4 +686,3 @@ class Module(BaseModule):
         )
 
         return
-    
