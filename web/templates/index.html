@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OctoRecon | Security Scanner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333333;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555555;
+        }
+
+        .grade-A {
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Keep grades B&W themed but distinct */
+        .grade-B {
+            color: #cccccc;
+        }
+
+        .grade-C {
+            color: #888888;
+        }
+
+        .grade-F {
+            color: #444444;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col h-screen overflow-hidden antialiased">
+
+    <!-- Top Navigation -->
+    <nav class="border-b border-gray-800 p-4 flex justify-between items-center bg-black z-10 relative">
+        <div>
+            <h1 class="text-xl font-bold tracking-tighter">OCTO<span class="text-gray-500">RECON</span></h1>
+            <p class="text-xs text-gray-500 mono mt-1">v2.0 // Passive Intelligence Engine</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="document.getElementById('fileUpload').click()"
+                class="px-4 py-2 text-sm border border-gray-700 hover:border-gray-400 text-gray-300 rounded transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                Import JSON
+            </button>
+            <input type="file" id="fileUpload" accept=".json" class="hidden" onchange="importReport(event)">
+
+            <button id="exportBtn" onclick="exportReport()"
+                class="hidden px-4 py-2 text-sm bg-white text-black font-semibold rounded hover:bg-gray-200 transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                Export Report
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Workspace -->
+    <div class="flex flex-col md:flex-row flex-1 overflow-hidden">
+
+        <!-- Sidebar Configuration -->
+        <div class="w-full md:w-80 border-r border-gray-800 bg-[#0a0a0a] flex flex-col h-full z-0 relative">
+            <div class="p-5 flex-1 overflow-y-auto">
+                <h2 class="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-4">New Scan</h2>
+
+                <label class="block mb-1 text-sm text-gray-300">Target URL</label>
+                <input type="url" id="targetUrl" placeholder="https://example.com"
+                    class="w-full bg-black border border-gray-700 rounded p-2.5 mb-6 text-white focus:outline-none focus:border-white transition text-sm">
+
+                <div class="flex justify-between items-center mb-3 border-b border-gray-800 pb-2">
+                    <label class="text-sm text-gray-300">Active Modules</label>
+                    <button onclick="selectAllModules()"
+                        class="text-xs text-gray-500 hover:text-white transition">Select All</button>
+                </div>
+
+                <div id="modulesContainer" class="space-y-1 mb-6">
+                    <div class="text-gray-600 text-sm italic">Loading modules...</div>
+                </div>
+            </div>
+
+            <div class="p-5 border-t border-gray-800 bg-black">
+                <button id="scanBtn" onclick="runScan()"
+                    class="w-full bg-white text-black hover:bg-gray-200 font-bold py-3 px-4 rounded transition text-sm flex justify-center items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <span>Execute Scan</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Report Viewer -->
+        <div class="flex-1 bg-black flex flex-col h-full overflow-hidden relative">
+
+            <!-- Loading State -->
+            <div id="loader"
+                class="hidden absolute inset-0 bg-black/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
+                <div class="w-16 h-16 border-4 border-gray-800 border-t-white rounded-full animate-spin mb-4"></div>
+                <p class="text-gray-400 mono text-sm" id="loaderText">Establishing connection & launching modules...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="flex-1 flex flex-col items-center justify-center text-gray-600">
+                <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                    </path>
+                </svg>
+                <p class="text-sm">Enter a target and execute a scan, or import a JSON report.</p>
+            </div>
+
+            <!-- Results Content -->
+            <div id="resultsContent" class="hidden flex-1 overflow-y-auto p-6 md:p-10">
+
+                <div class="flex justify-between items-end mb-8 border-b border-gray-800 pb-4">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Target Analysis</p>
+                        <h2 class="text-3xl font-bold mono" id="resTarget">https://example.com</h2>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Generated</p>
+                        <p class="text-sm mono text-gray-300" id="resTime">2026-10-02 10:00:00</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                    <div
+                        class="bg-[#0a0a0a] border border-gray-800 p-6 rounded flex flex-col items-center justify-center">
+                        <p class="text-xs text-gray-500 uppercase tracking-widest mb-2">Security Grade</p>
+                        <p class="text-5xl font-bold font-serif" id="resGrade">A+</p>
+                    </div>
+                    <div
+                        class="bg-[#0a0a0a] border border-gray-800 p-6 rounded flex flex-col items-center justify-center">
+                        <p class="text-xs text-gray-500 uppercase tracking-widest mb-2">Total Score</p>
+                        <p class="text-4xl font-bold mono"><span id="resScore" class="text-white">0</span> <span
+                                class="text-gray-600 text-2xl">/ <span id="resMax">0</span></span></p>
+                    </div>
+                    <div class="bg-[#0a0a0a] border border-gray-800 p-6 rounded flex flex-col justify-center">
+                        <p class="text-xs text-gray-500 uppercase tracking-widest mb-2">Tool Version</p>
+                        <p class="text-lg mono text-gray-300" id="resTool">OctoRecon v2 (Modern)</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold tracking-tight">Intelligence Modules</h3>
+                    <div class="text-xs text-gray-500 mono" id="moduleCount">0 modules executed</div>
+                </div>
+
+                <div id="moduleResults" class="space-y-6">
+                    <!-- Module cards populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800 bg-black p-3 text-center text-xs text-gray-500 mono z-10 relative">
+        Developed by <span class="text-white font-medium">octopus</span>, enhanced by <a href="https://syn606.wtf" target="_blank" rel="noopener noreferrer" class="text-cyan-600 hover:text-cyan-400 transition underline decoration-gray-700 underline-offset-4">syn606</a>
+    </footer>
+
+    <!-- Toast Notifications (Graceful Errors) -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <script>
+        let currentReportData = null;
+
+        // Graceful Error Toast System
+        function showToast(message, type = 'error') {
+            const toast = document.createElement('div');
+            const bgColor = type === 'error' ? 'bg-red-900 border-red-700' : 'bg-gray-800 border-gray-600';
+            const icon = type === 'error' ? '!' : '✓';
+
+            toast.className = `flex items-center gap-3 p-4 rounded border text-sm text-white shadow-lg transform transition-all duration-300 translate-y-10 opacity-0 ${bgColor}`;
+            toast.innerHTML = `<span class="font-bold mono text-lg">${icon}</span> <span>${message}</span>`;
+
+            document.getElementById('toastContainer').appendChild(toast);
+
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+
+            // Animate out and remove
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // Load Modules on startup
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/modules');
+                if (!res.ok) throw new Error("Backend API unavailable");
+                const modules = await res.json();
+
+                const container = document.getElementById('modulesContainer');
+                container.innerHTML = '';
+
+                modules.forEach(m => {
+                    const id = `mod-${m.name.replace(/\s+/g, '-')}`;
+                    container.innerHTML += `
+                        <div class="flex items-center py-1.5 px-2 hover:bg-gray-900 rounded group transition cursor-pointer" onclick="document.getElementById('${id}').click()">
+                            <input type="checkbox" id="${id}" value="${m.name}" checked class="w-4 h-4 text-black bg-black border-gray-600 rounded focus:ring-0 focus:ring-offset-0 cursor-pointer">
+                            <label for="${id}" class="ml-3 text-sm text-gray-300 group-hover:text-white cursor-pointer select-none flex-1">${m.name}</label>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                document.getElementById('modulesContainer').innerHTML = `<div class="text-red-500 text-sm">Error loading modules. Ensure server is running.</div>`;
+                showToast("Failed to load modules from server.", "error");
+            }
+        });
+
+        function selectAllModules() {
+            document.querySelectorAll('#modulesContainer input[type="checkbox"]').forEach(cb => cb.checked = true);
+        }
+
+        async function runScan() {
+            const target = document.getElementById('targetUrl').value;
+            if (!target) {
+                showToast("Please enter a valid target URL.", "error");
+                return;
+            }
+
+            const selected = Array.from(document.querySelectorAll('#modulesContainer input:checked')).map(cb => cb.value);
+            if (selected.length === 0) {
+                showToast("Please select at least one module.", "error");
+                return;
+            }
+
+            // UI State
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('resultsContent').classList.add('hidden');
+            document.getElementById('loader').classList.remove('hidden');
+            const btn = document.getElementById('scanBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-pulse">Executing...</span>`;
+
+            currentReportData = null;
+            document.getElementById('exportBtn').classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target, modules: selected })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || `Server returned ${res.status}`);
+                }
+
+                const report = await res.json();
+                showToast("Scan completed successfully!", "success");
+                renderReport(report);
+            } catch (error) {
+                showToast(`Scan failed: ${error.message}`, "error");
+                document.getElementById('emptyState').classList.remove('hidden');
+            } finally {
+                document.getElementById('loader').classList.add('hidden');
+                btn.disabled = false;
+                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Execute Scan`;
+            }
+        }
+
+        // Export JSON Report
+        function exportReport() {
+            if (!currentReportData) return showToast("No report to export.", "error");
+
+            try {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentReportData, null, 4));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+
+                const targetName = currentReportData.target.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                const date = new Date().toISOString().slice(0, 10);
+                downloadAnchorNode.setAttribute("download", `octorecon_${targetName}_${date}.json`);
+
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+                showToast("Report exported successfully.", "success");
+            } catch (err) {
+                showToast("Failed to export report.", "error");
+            }
+        }
+
+        // Import JSON Report
+        function importReport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const report = JSON.parse(e.target.result);
+                    if (!report.target || !report.modules) throw new Error("Invalid OctoRecon report format.");
+
+                    showToast(`Loaded report for ${report.target}`, "success");
+                    renderReport(report);
+                } catch (err) {
+                    showToast(`Error parsing JSON: ${err.message}`, "error");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset input
+        }
+
+        // Render the UI from a JSON Report object
+        function renderReport(report) {
+            currentReportData = report;
+            document.getElementById('exportBtn').classList.remove('hidden');
+
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('resultsContent').classList.remove('hidden');
+
+            document.getElementById('resTarget').innerText = report.target;
+            document.getElementById('resTool').innerText = report.tool || 'Unknown';
+
+            const gradeEl = document.getElementById('resGrade');
+            gradeEl.innerText = report.grade || 'N/A';
+
+            if (report.grade) {
+                gradeEl.className = 'text-5xl font-bold font-serif grade-' + (report.grade.includes('A') ? 'A' : report.grade.includes('B') ? 'B' : report.grade.includes('F') ? 'F' : 'C');
+            }
+
+            document.getElementById('resScore').innerText = report.total_score || 0;
+            document.getElementById('resMax').innerText = report.max_potential_score || 0;
+
+            try {
+                document.getElementById('resTime').innerText = new Date(report.scan_time).toLocaleString();
+            } catch (e) { document.getElementById('resTime').innerText = report.scan_time; }
+
+            const modsContainer = document.getElementById('moduleResults');
+            modsContainer.innerHTML = '';
+
+            const modEntries = Object.entries(report.modules || {});
+            document.getElementById('moduleCount').innerText = `${modEntries.length} modules executed`;
+
+            modEntries.forEach(([modName, data]) => {
+                let dataHtml = '';
+                if (data.data && data.data.length > 0) {
+                    dataHtml = '<div class="mt-4 bg-[#0a0a0a] border border-gray-800 rounded overflow-x-auto"><table class="w-full text-sm text-left text-gray-300">';
+
+                    // Auto-detect headers from first item (Dictionaries) or assume flat array
+                    if (typeof data.data[0] === 'object' && !Array.isArray(data.data[0])) {
+                        const headers = Object.keys(data.data[0]);
+                        dataHtml += `<thead class="text-xs text-gray-500 uppercase bg-black border-b border-gray-800"><tr>`;
+                        headers.forEach(h => dataHtml += `<th class="px-4 py-2">${h}</th>`);
+                        dataHtml += `</tr></thead><tbody>`;
+
+                        data.data.forEach(item => {
+                            dataHtml += `<tr class="border-b border-gray-800/50 hover:bg-gray-900/50">`;
+                            headers.forEach(h => dataHtml += `<td class="px-4 py-2 whitespace-nowrap mono">${item[h] !== null ? item[h] : '-'}</td>`);
+                            dataHtml += `</tr>`;
+                        });
+                    } else {
+                        // Legacy flat arrays handling
+                        dataHtml += `<tbody>`;
+                        data.data.forEach(item => {
+                            dataHtml += `<tr class="border-b border-gray-800/50 hover:bg-gray-900/50"><td class="px-4 py-2 mono">${Array.isArray(item) ? item.join(' | ') : JSON.stringify(item)}</td></tr>`;
+                        });
+                    }
+                    dataHtml += '</tbody></table></div>';
+                }
+
+                // Calculate percentage for styling
+                const pct = data.max_score > 0 ? (data.score / data.max_score) : 1;
+                const scoreColor = pct >= 0.8 ? 'text-white' : pct >= 0.5 ? 'text-gray-400' : 'text-gray-600';
+
+                modsContainer.innerHTML += `
+                    <div class="bg-black border border-gray-800 rounded-lg p-5 hover:border-gray-600 transition duration-300">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="font-bold text-lg tracking-tight">${modName}</h4>
+                            <div class="mono text-sm bg-gray-900 px-3 py-1 rounded border border-gray-800">
+                                <span class="${scoreColor} font-bold">${data.score}</span> <span class="text-gray-600">/ ${data.max_score}</span>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-400 leading-relaxed">${data.description || 'No additional details provided.'}</p>
+                        ${dataHtml}
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+
+</html>
