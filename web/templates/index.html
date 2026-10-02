@@ -161,7 +161,7 @@
                     <div
                         class="bg-[#0a0a0a] border border-gray-800 p-6 rounded flex flex-col items-center justify-center">
                         <p class="text-xs text-gray-500 uppercase tracking-widest mb-2">Security Grade</p>
-                        <p class="text-5xl font-bold font-serif" id="resGrade">A+</p>
+                        <p class="text-5xl font-bold font-serif mb-2" id="resGrade">A+</p><p class="text-xs text-gray-500 mt-1 max-w-[200px]" id="resNotes"></p>
                     </div>
                     <div
                         class="bg-[#0a0a0a] border border-gray-800 p-6 rounded flex flex-col items-center justify-center">
@@ -355,6 +355,7 @@
 
             const gradeEl = document.getElementById('resGrade');
             gradeEl.innerText = report.grade || 'N/A';
+document.getElementById('resNotes').innerText = report.grading_notes || '';
 
             if (report.grade) {
                 gradeEl.className = 'text-5xl font-bold font-serif grade-' + (report.grade.includes('A') ? 'A' : report.grade.includes('B') ? 'B' : report.grade.includes('F') ? 'F' : 'C');
