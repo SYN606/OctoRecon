@@ -1,253 +1,98 @@
-"""
-Base Module
-All scanner modules inherit from this class.
-AUTHOR : 0ctopu3
-VERSION : 1.0.0
-"""
-
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any, Dict, Optional
 from urllib.parse import urljoin
 import asyncio
-
 from rich.table import Table
 
+from core.schemas import ModuleResult
+
+if TYPE_CHECKING:
+    from core.scanner import Scanner
 
 class BaseModule(ABC):
-
-    name = "Base Module"
-    description = ""
-    version = "1.0.0"
-
-    max_score = 20
-    timeout = 15
-    retries = 2
+    name: str = "Base Module"
+    description: str = ""
+    category: str = "General"
+    version: str = "1.0.0"
+    max_score: int = 20
+    timeout: int = 15
+    retries: int = 2
 
     def __init__(self):
         self.score = self.max_score
 
     # --------------------------------------------------
-    # Logging Helpers
+    # V1 Backward Compatibility Layer
     # --------------------------------------------------
-
-    def info(self, scanner, message):
-
+    
+    def info(self, scanner: 'Scanner', message: str):
         if hasattr(scanner, "logger"):
             scanner.logger.info(f"[{self.name}] {message}")
 
-    def warning(self, scanner, message):
-
+    def warning(self, scanner: 'Scanner', message: str):
         if hasattr(scanner, "logger"):
             scanner.logger.warning(f"[{self.name}] {message}")
 
-    def error(self, scanner, message):
-
+    def error(self, scanner: 'Scanner', message: str):
         if hasattr(scanner, "logger"):
             scanner.logger.error(f"[{self.name}] {message}")
 
-    # --------------------------------------------------
-    # URL Helper
-    # --------------------------------------------------
-
-    def make_url(self, scanner, path):
-
+    def make_url(self, scanner: 'Scanner', path: str) -> str:
         return urljoin(scanner.target, path)
 
-    # --------------------------------------------------
-    # HTTP Helpers
-    # --------------------------------------------------
-
-    async def get(self, scanner, url, **kwargs):
-
+    async def get(self, scanner: 'Scanner', url: str, **kwargs) -> Any:
         kwargs.setdefault("timeout", self.timeout)
-
         last_error = None
-
         for _ in range(self.retries):
-
             try:
                 return await scanner.client.get(url, **kwargs)
-
             except Exception as e:
-
                 last_error = e
                 await asyncio.sleep(0.5)
-
         raise last_error
 
-    async def head(self, scanner, url, **kwargs):
-
+    async def head(self, scanner: 'Scanner', url: str, **kwargs) -> Any:
         kwargs.setdefault("timeout", self.timeout)
+        return await scanner.client.head(url, **kwargs)
 
-        return await scanner.client.head(
-            url,
-            **kwargs
-        )
-
-    # --------------------------------------------------
-    # Score
-    # --------------------------------------------------
-
-    def deduct(self, value):
-
-        self.score -= value
-
-        if self.score < 0:
-            self.score = 0
+    def deduct(self, value: int):
+        self.score = max(0, self.score - value)
 
     def reset_score(self):
-
         self.score = self.max_score
 
-    # --------------------------------------------------
-    # Report Helper
-    # --------------------------------------------------
-
-    def add_report(self, scanner, report):
-
-        scanner.report.add_module(
-            self.name,
-            report
+    def add_report(self, scanner: 'Scanner', report: Dict[str, Any]):
+        """Legacy V1 Method: Converts V1 dict reports into V2 Pydantic ModuleResults."""
+        res = ModuleResult(
+            module_name=self.name,
+            score=report.get("score", self.score),
+            max_score=report.get("max_score", self.max_score),
+            description=report.get("description", ""),
+            data=report.get("rows", []) or ([{"Content": report.get("content")}] if "content" in report else [])
         )
+        scanner.report.modules[self.name] = res
 
-    # --------------------------------------------------
-    # Console Helpers
-    # --------------------------------------------------
+    def print_table(self, scanner: 'Scanner', title: str, columns: list, rows: list, limit=None, footer=None):
+        pass # UI handled completely by scanner V2 now
 
-    def print_table(
-        self,
-        scanner,
-        title,
-        columns,
-        rows,
-        limit=None,
-        footer=None,
-    ):
+    def print_kv_table(self, scanner: 'Scanner', title: str, data: dict):
+        pass # UI handled completely by scanner V2 now
 
-        total_rows = len(rows)
+    def print_status(self, scanner: 'Scanner', title: str, value: str):
+        pass # UI handled completely by scanner V2 now
 
-        if limit is not None:
-            display_rows = rows[:limit]
-        else:
-            display_rows = rows
-
-        table = Table(title=title)
-
-        for column in columns:
-
-            table.add_column(
-                str(column),
-                style="cyan",
-                overflow="fold",
-            )
-
-        if not display_rows:
-
-            table.add_row(
-                *["-" for _ in columns]
-            )
-
-        else:
-
-            for row in display_rows:
-
-                if isinstance(row, dict):
-
-                    table.add_row(
-                        *[
-                            str(row.get(col, "-"))
-                            for col in columns
-                        ]
-                    )
-
-                else:
-
-                    table.add_row(
-                        *[
-                            str(value)
-                            for value in row
-                        ]
-                    )
-
-        scanner.console.print(table)
-
-        if limit is not None and total_rows > limit:
-
-            scanner.console.print(
-                f"[yellow]Showing {min(limit, total_rows)} of {total_rows} results.[/yellow]"
-            )
-
-        if footer:
-
-            scanner.console.print(
-                f"[cyan]{footer}[/cyan]"
-            )
-
-    def print_kv_table(
-        self,
-        scanner,
-        title,
-        data,
-    ):
-
-        table = Table(title=title)
-
-        table.add_column(
-            "Property",
-            style="cyan",
-        )
-
-        table.add_column(
-            "Value",
-            style="green",
-            overflow="fold",
-        )
-
-        for key, value in data.items():
-
-            table.add_row(
-                str(key),
-                str(value),
-            )
-
-        scanner.console.print(table)
-
-    def print_status(
-        self,
-        scanner,
-        title,
-        value,
-    ):
-
-        self.print_kv_table(
-            scanner,
-            title,
-            {
-                "Status": value,
-            },
-        )
-
-    def print_empty(
-        self,
-        scanner,
-        title,
-        message="No data found.",
-    ):
-
-        scanner.console.print(
-            f"[yellow]{title}[/yellow]"
-        )
-
-        scanner.console.print(
-            message
-        )
+    def print_empty(self, scanner: 'Scanner', title: str, message: str = "No data found."):
+        pass # UI handled completely by scanner V2 now
 
     # --------------------------------------------------
-    # Execute
+    # Module Execution
     # --------------------------------------------------
 
     @abstractmethod
-    async def run(self, scanner):
+    async def run(self, scanner: 'Scanner') -> Optional[ModuleResult]:
         """
-        Execute module.
+        Execute module. 
+        V2 modules should return a ModuleResult directly.
+        V1 modules can continue calling self.add_report() and returning None.
         """
         raise NotImplementedError

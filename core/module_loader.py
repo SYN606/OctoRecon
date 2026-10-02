@@ -1,62 +1,31 @@
-"""
-Module Loader
-Author : 0ct0pu3
-VERSION : 1.0.0
+import importlib
+import pkgutil
+from pathlib import Path
+from typing import List
+from core.base_module import BaseModule
 
-Loads all OctoRecon scanner modules.
-"""
+def load_modules(package_path: str = "modules") -> List[BaseModule]:
+    """Dynamically loads all classes inheriting from BaseModule inside the modules directory."""
+    modules = []
+    base_dir = Path(__file__).resolve().parent.parent / package_path
 
-# ----------------------------
-# Passive Modules
-# ----------------------------
+    # Iterate through all files in the modules directory recursively
+    for path in base_dir.rglob("*.py"):
+        if path.name == "__init__.py":
+            continue
+            
+        # Convert path to python module path (e.g. modules.passive.robots)
+        rel_path = path.relative_to(base_dir.parent)
+        module_name = str(rel_path.with_suffix('')).replace('\\', '.').replace('/', '.')
 
-from modules.headers import HeaderScanner
-from modules.ssl import SSLScanner
-from modules.dns import DNSScanner
-from modules.methods import MethodScanner
-from modules.cookies import CookieScanner
-from modules.redirects import RedirectScanner
-from modules.tech import TechnologyScanner
-from modules.whois_lookup import WhoisScanner
-from modules.broken_links import BrokenLinkScanner
+        try:
+            mod = importlib.import_module(module_name)
+            # Find any class in the module that inherits from BaseModule (but is not BaseModule itself)
+            for item_name in dir(mod):
+                item = getattr(mod, item_name)
+                if isinstance(item, type) and issubclass(item, BaseModule) and item is not BaseModule:
+                    modules.append(item())
+        except Exception as e:
+            print(f"[!] Failed to load plugin {module_name}: {e}")
 
-
-# New Passive Modules
-from modules.passive.robots import Module as RobotsScanner
-from modules.passive.securitytxt import Module as SecurityTxtScanner
-from modules.passive.sitemap import Module as SitemapScanner
-from modules.passive.javascript import Module as JavaScriptScanner
-from modules.passive.emails import Module as EmailScanner
-from modules.passive.subdomains import Module as SubdomainScanner
-from modules.passive.wayback import Module as Wayback
-
-from modules.security.csp import Module as CSPScanner
-
-# ----------------------------
-# Registered Modules
-# ----------------------------
-
-MODULES = [
-
-    # Passive Recon
-    HeaderScanner(),
-    SSLScanner(),
-    DNSScanner(),
-    MethodScanner(),
-    CookieScanner(),
-    RedirectScanner(),
-    TechnologyScanner(),
-    WhoisScanner(),
-    BrokenLinkScanner(),
-    RobotsScanner(),
-    SecurityTxtScanner(),
-    SitemapScanner(),
-    JavaScriptScanner(),
-    EmailScanner(),
-    SubdomainScanner(),
-    Wayback(),
-
-    # Security
-    CSPScanner(),
-
-]
+    return modules
