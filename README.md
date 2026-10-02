@@ -23,7 +23,7 @@ OctoRecon V2 is a high-speed, highly concurrent reconnaissance framework designe
 ### 2. Installation
 ```powershell
 # Clone the repository and navigate to the folder
-git clone https://github.com/yourusername/octorecon.git
+git clone https://github.com/syn606/octorecon.git
 cd OctoRecon
 
 # Install dependencies using uv
@@ -34,8 +34,11 @@ uv pip install -r requirements.txt
 To prevent rate-limiting (429 errors) and unlock deep OSINT scanning (like Shodan), you must configure your API keys:
 
 ```powershell
-# Copy the template environment file
+# Copy the template environment file [WINDOWS ONLYL]
 Copy-Item example.env .env
+```
+```bash
+cp example.env .env
 ```
 
 Open `.env` in your text editor and add your free API keys for Shodan, AlienVault, SecurityTrails, etc.
