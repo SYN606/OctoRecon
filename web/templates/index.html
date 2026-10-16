@@ -5,60 +5,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OctoRecon | Security Scanner</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
-    <style>
-        body {
-            background-color: #000000;
-            color: #ffffff;
-            font-family: 'Inter', sans-serif;
-        }
-
-        .mono {
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #0a0a0a;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #333333;
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555555;
-        }
-
-        .grade-A {
-            color: #ffffff;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-        }
-
-        /* Keep grades B&W themed but distinct */
-        .grade-B {
-            color: #cccccc;
-        }
-
-        .grade-C {
-            color: #888888;
-        }
-
-        .grade-F {
-            color: #444444;
+    <!-- Cytoscape.js for DNSDumpster-style Infrastructure Mapping -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            ::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+            }
+            ::-webkit-scrollbar-track {
+                background: #0a0a0a;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #333333;
+                border-radius: 4px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: #555555;
+            }
+            .mono {
+                font-family: 'JetBrains Mono', monospace;
+            }
         }
     </style>
 </head>
 
-<body class="flex flex-col h-screen overflow-hidden antialiased">
+<body class="bg-black text-white font-sans flex flex-col h-screen overflow-hidden antialiased">
 
     <!-- Top Navigation -->
     <nav class="border-b border-gray-800 p-4 flex justify-between items-center bg-black z-10 relative">
@@ -97,13 +87,17 @@
                 <h2 class="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-4">New Scan</h2>
 
                 <label class="block mb-1 text-sm text-gray-300">Target URL</label>
-                <input type="url" id="targetUrl" placeholder="https://example.com"
+                <input type="text" id="targetUrl" placeholder="example.com or https://example.com"
                     class="w-full bg-black border border-gray-700 rounded p-2.5 mb-6 text-white focus:outline-none focus:border-white transition text-sm">
 
                 <div class="flex justify-between items-center mb-3 border-b border-gray-800 pb-2">
-                    <label class="text-sm text-gray-300">Active Modules</label>
-                    <button onclick="selectAllModules()"
-                        class="text-xs text-gray-500 hover:text-white transition">Select All</button>
+                    <div>
+                        <label class="text-sm text-gray-300 font-medium">Active Modules</label>
+                        <span id="selectedCount" class="text-xs text-gray-500 mono ml-1"></span>
+                    </div>
+                    <button type="button" id="toggleAllBtn" onclick="toggleAllModules()"
+                        class="text-xs text-gray-400 hover:text-white transition underline decoration-gray-700 underline-offset-2">Deselect
+                        All</button>
                 </div>
 
                 <div id="modulesContainer" class="space-y-1 mb-6">
@@ -161,7 +155,8 @@
                     <div
                         class="bg-[#0a0a0a] border border-gray-800 p-6 rounded flex flex-col items-center justify-center">
                         <p class="text-xs text-gray-500 uppercase tracking-widest mb-2">Security Grade</p>
-                        <p class="text-5xl font-bold font-serif mb-2" id="resGrade">A+</p><p class="text-xs text-gray-500 mt-1 max-w-[200px]" id="resNotes"></p>
+                        <p class="text-5xl font-bold font-serif mb-2" id="resGrade">A+</p>
+                        <p class="text-xs text-gray-500 mt-1 max-w-[200px]" id="resNotes"></p>
                     </div>
                     <div
                         class="bg-[#0a0a0a] border border-gray-800 p-6 rounded flex flex-col items-center justify-center">
@@ -175,21 +170,98 @@
                     </div>
                 </div>
 
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold tracking-tight">Intelligence Modules</h3>
+                <!-- View Switcher (Modules vs Infrastructure Graph) -->
+                <div class="flex justify-between items-center mb-6 border-b border-gray-800 pb-3">
+                    <div class="flex items-center gap-2">
+                        <button id="tabModulesBtn" onclick="switchView('modules')"
+                            class="px-4 py-1.5 text-xs font-semibold rounded bg-white text-black transition">
+                            Module Reports
+                        </button>
+                        <button id="tabGraphBtn" onclick="switchView('graph')"
+                            class="px-4 py-1.5 text-xs font-semibold rounded bg-gray-900 text-gray-400 hover:text-white border border-gray-800 transition flex items-center gap-2">
+                            <span>Infrastructure Graph (DNSDumpster)</span>
+                            <span id="graphNodeCount"
+                                class="bg-black px-1.5 py-0.5 rounded text-[10px] mono border border-gray-700">0</span>
+                        </button>
+                    </div>
                     <div class="text-xs text-gray-500 mono" id="moduleCount">0 modules executed</div>
                 </div>
 
+                <!-- Module Results View -->
                 <div id="moduleResults" class="space-y-6">
                     <!-- Module cards populated by JS -->
                 </div>
+
+                <!-- Interactive Infrastructure Graph View -->
+                <div id="graphView"
+                    class="hidden flex-col h-[650px] border border-gray-800 bg-[#0a0a0a] rounded-lg overflow-hidden relative">
+                    <!-- Graph Controls -->
+                    <div
+                        class="p-3 border-b border-gray-800 bg-black flex flex-wrap justify-between items-center gap-3 z-10">
+                        <div class="flex items-center gap-1.5 text-xs" id="graphFilters">
+                            <span
+                                class="text-gray-500 mr-1 uppercase tracking-wider text-[10px] font-semibold">Filter:</span>
+                            <button onclick="filterGraph('all')"
+                                class="graph-filter-btn px-2.5 py-1 rounded bg-white text-black text-xs font-medium"
+                                data-type="all">All</button>
+                            <button onclick="filterGraph('domain')"
+                                class="graph-filter-btn px-2.5 py-1 rounded bg-gray-900 text-gray-400 hover:text-white border border-gray-800 text-xs"
+                                data-type="domain">Domains</button>
+                            <button onclick="filterGraph('subdomain')"
+                                class="graph-filter-btn px-2.5 py-1 rounded bg-gray-900 text-gray-400 hover:text-white border border-gray-800 text-xs"
+                                data-type="subdomain">Subdomains</button>
+                            <button onclick="filterGraph('ip')"
+                                class="graph-filter-btn px-2.5 py-1 rounded bg-gray-900 text-gray-400 hover:text-white border border-gray-800 text-xs"
+                                data-type="ip">IPs</button>
+                            <button onclick="filterGraph('mailserver')"
+                                class="graph-filter-btn px-2.5 py-1 rounded bg-gray-900 text-gray-400 hover:text-white border border-gray-800 text-xs"
+                                data-type="mailserver">MX</button>
+                            <button onclick="filterGraph('nameserver')"
+                                class="graph-filter-btn px-2.5 py-1 rounded bg-gray-900 text-gray-400 hover:text-white border border-gray-800 text-xs"
+                                data-type="nameserver">NS</button>
+                            <button onclick="filterGraph('asn')"
+                                class="graph-filter-btn px-2.5 py-1 rounded bg-gray-900 text-gray-400 hover:text-white border border-gray-800 text-xs"
+                                data-type="asn">ASNs</button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="resetGraphLayout()"
+                                class="px-2.5 py-1 bg-gray-900 text-gray-300 hover:text-white border border-gray-800 rounded text-xs">Reset
+                                Layout</button>
+                            <button onclick="if(cy){cy.fit(); cy.zoom(cy.zoom()*0.9);}"
+                                class="px-2 py-1 bg-gray-900 text-gray-300 hover:text-white border border-gray-800 rounded text-xs">Fit</button>
+                            <button onclick="if(cy){cy.zoom(cy.zoom()*1.25);}"
+                                class="px-2 py-1 bg-gray-900 text-gray-300 hover:text-white border border-gray-800 rounded text-xs">+</button>
+                            <button onclick="if(cy){cy.zoom(cy.zoom()*0.8);}"
+                                class="px-2 py-1 bg-gray-900 text-gray-300 hover:text-white border border-gray-800 rounded text-xs">-</button>
+                        </div>
+                    </div>
+
+                    <!-- Canvas -->
+                    <div id="cy" class="flex-1 w-full h-[580px] bg-[#050505]"></div>
+
+                    <!-- Node Inspector Modal -->
+                    <div id="nodeInspector"
+                        class="hidden absolute bottom-4 left-4 max-w-sm bg-black/95 backdrop-blur border border-gray-700 p-4 rounded-lg shadow-2xl z-20">
+                        <div class="flex justify-between items-start mb-2">
+                            <span id="inspectType"
+                                class="text-[10px] uppercase font-bold mono px-2 py-0.5 rounded bg-gray-800 text-gray-300">Type</span>
+                            <button onclick="document.getElementById('nodeInspector').classList.add('hidden')"
+                                class="text-gray-500 hover:text-white text-sm">✕</button>
+                        </div>
+                        <h4 id="inspectLabel" class="font-bold text-white mono text-sm break-all">Node Name</h4>
+                        <div id="inspectDetails" class="text-xs text-gray-400 mt-2 space-y-1"></div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
 
     <!-- Footer -->
     <footer class="border-t border-gray-800 bg-black p-3 text-center text-xs text-gray-500 mono z-10 relative">
-        Developed by <span class="text-white font-medium">octopus</span>, enhanced by <a href="https://syn606.wtf" target="_blank" rel="noopener noreferrer" class="text-cyan-600 hover:text-cyan-400 transition underline decoration-gray-700 underline-offset-4">syn606</a>
+        Developed by <span class="text-white font-medium">octopus</span>, enhanced by <a href="https://syn606.wtf"
+            target="_blank" rel="noopener noreferrer"
+            class="text-cyan-600 hover:text-cyan-400 transition underline decoration-gray-700 underline-offset-4">syn606</a>
     </footer>
 
     <!-- Toast Notifications (Graceful Errors) -->
@@ -197,6 +269,7 @@
 
     <script>
         let currentReportData = null;
+        let cy = null;
 
         // Graceful Error Toast System
         function showToast(message, type = 'error') {
@@ -221,6 +294,32 @@
             }, 5000);
         }
 
+        // View Switcher (Modules vs Infrastructure Graph)
+        function switchView(view) {
+            const modBtn = document.getElementById('tabModulesBtn');
+            const graphBtn = document.getElementById('tabGraphBtn');
+            const modView = document.getElementById('moduleResults');
+            const graphView = document.getElementById('graphView');
+
+            if (view === 'modules') {
+                modView.classList.remove('hidden');
+                graphView.classList.add('hidden');
+                modBtn.className = 'px-4 py-1.5 text-xs font-semibold rounded bg-white text-black transition';
+                graphBtn.className = 'px-4 py-1.5 text-xs font-semibold rounded bg-gray-900 text-gray-400 hover:text-white border border-gray-800 transition flex items-center gap-2';
+            } else {
+                modView.classList.add('hidden');
+                graphView.classList.remove('hidden');
+                graphBtn.className = 'px-4 py-1.5 text-xs font-semibold rounded bg-white text-black transition flex items-center gap-2';
+                modBtn.className = 'px-4 py-1.5 text-xs font-semibold rounded bg-gray-900 text-gray-400 hover:text-white border border-gray-800 transition';
+                if (cy) {
+                    setTimeout(() => {
+                        cy.resize();
+                        cy.fit(undefined, 30);
+                    }, 50);
+                }
+            }
+        }
+
         // Load Modules on startup
         document.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -229,32 +328,58 @@
                 const modules = await res.json();
 
                 const container = document.getElementById('modulesContainer');
-                container.innerHTML = '';
+                let html = '';
 
                 modules.forEach(m => {
-                    const id = `mod-${m.name.replace(/\s+/g, '-')}`;
-                    container.innerHTML += `
-                        <div class="flex items-center py-1.5 px-2 hover:bg-gray-900 rounded group transition cursor-pointer" onclick="document.getElementById('${id}').click()">
-                            <input type="checkbox" id="${id}" value="${m.name}" checked class="w-4 h-4 text-black bg-black border-gray-600 rounded focus:ring-0 focus:ring-offset-0 cursor-pointer">
-                            <label for="${id}" class="ml-3 text-sm text-gray-300 group-hover:text-white cursor-pointer select-none flex-1">${m.name}</label>
-                        </div>
+                    const id = `mod-${m.name.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                    html += `
+                        <label class="flex items-center py-1.5 px-2 hover:bg-gray-900 rounded group transition cursor-pointer select-none">
+                            <input type="checkbox" id="${id}" value="${m.name}" checked onchange="updateModuleSelectionUI()"
+                                class="w-4 h-4 text-black accent-white bg-black border-gray-600 rounded focus:ring-0 focus:ring-offset-0 cursor-pointer">
+                            <span class="ml-3 text-sm text-gray-300 group-hover:text-white flex-1">${m.name}</span>
+                            <span class="text-[10px] text-gray-600 group-hover:text-gray-400 mono uppercase tracking-wider">${m.category || ''}</span>
+                        </label>
                     `;
                 });
+                container.innerHTML = html;
+                updateModuleSelectionUI();
             } catch (err) {
                 document.getElementById('modulesContainer').innerHTML = `<div class="text-red-500 text-sm">Error loading modules. Ensure server is running.</div>`;
                 showToast("Failed to load modules from server.", "error");
             }
         });
 
-        function selectAllModules() {
-            document.querySelectorAll('#modulesContainer input[type="checkbox"]').forEach(cb => cb.checked = true);
+        function updateModuleSelectionUI() {
+            const checkboxes = document.querySelectorAll('#modulesContainer input[type="checkbox"]');
+            const checked = Array.from(checkboxes).filter(cb => cb.checked);
+            const countEl = document.getElementById('selectedCount');
+            if (countEl) {
+                countEl.innerText = `(${checked.length}/${checkboxes.length})`;
+            }
+            const btn = document.getElementById('toggleAllBtn');
+            if (btn) {
+                btn.innerText = (checked.length === checkboxes.length) ? 'Deselect All' : 'Select All';
+            }
+        }
+
+        function toggleAllModules() {
+            const checkboxes = document.querySelectorAll('#modulesContainer input[type="checkbox"]');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            checkboxes.forEach(cb => cb.checked = !allChecked);
+            updateModuleSelectionUI();
         }
 
         async function runScan() {
-            const target = document.getElementById('targetUrl').value;
+            let target = document.getElementById('targetUrl').value.trim();
             if (!target) {
                 showToast("Please enter a valid target URL.", "error");
                 return;
+            }
+
+            // Automatically prepend https:// if protocol is omitted
+            if (!/^https?:\/\//i.test(target)) {
+                target = 'https://' + target;
+                document.getElementById('targetUrl').value = target;
             }
 
             const selected = Array.from(document.querySelectorAll('#modulesContainer input:checked')).map(cb => cb.value);
@@ -342,6 +467,242 @@
             event.target.value = ''; // Reset input
         }
 
+        // Cytoscape.js Infrastructure Graph Renderer (DNSDumpster Style)
+        function renderGraph(graphData) {
+            const nodes = (graphData && graphData.nodes) || [];
+            const edges = (graphData && graphData.edges) || [];
+
+            document.getElementById('graphNodeCount').innerText = nodes.length;
+
+            if (nodes.length === 0) {
+                document.getElementById('cy').innerHTML = `<div class="h-full flex items-center justify-center text-gray-600 text-sm">No infrastructure nodes discovered. Run DNS and Subdomains modules.</div>`;
+                return;
+            }
+
+            const cyElements = [];
+
+            // Add nodes
+            nodes.forEach(n => {
+                cyElements.push({
+                    group: 'nodes',
+                    data: {
+                        id: n.id,
+                        label: n.label,
+                        type: n.type,
+                        metadata: n.metadata || {}
+                    }
+                });
+            });
+
+            // Add edges
+            edges.forEach(e => {
+                cyElements.push({
+                    group: 'edges',
+                    data: {
+                        id: `${e.source}->${e.target}`,
+                        source: e.source,
+                        target: e.target,
+                        relation: e.relation || ''
+                    }
+                });
+            });
+
+            if (cy) {
+                cy.destroy();
+            }
+
+            cy = cytoscape({
+                container: document.getElementById('cy'),
+                elements: cyElements,
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'label': 'data(label)',
+                            'color': '#d4d4d4',
+                            'font-family': 'JetBrains Mono, monospace',
+                            'font-size': '10px',
+                            'text-valign': 'bottom',
+                            'text-margin-y': '5px',
+                            'background-color': '#404040',
+                            'border-width': '2px',
+                            'border-color': '#525252',
+                            'width': '24px',
+                            'height': '24px'
+                        }
+                    },
+                    {
+                        selector: 'node[type = "domain"]',
+                        style: {
+                            'background-color': '#ffffff',
+                            'border-color': '#ffffff',
+                            'width': '38px',
+                            'height': '38px',
+                            'font-size': '12px',
+                            'font-weight': 'bold',
+                            'color': '#ffffff'
+                        }
+                    },
+                    {
+                        selector: 'node[type = "subdomain"]',
+                        style: {
+                            'background-color': '#15803d',
+                            'border-color': '#22c55e',
+                            'width': '22px',
+                            'height': '22px'
+                        }
+                    },
+                    {
+                        selector: 'node[type = "ip"]',
+                        style: {
+                            'background-color': '#a16207',
+                            'border-color': '#eab308',
+                            'shape': 'round-rectangle',
+                            'width': '20px',
+                            'height': '20px'
+                        }
+                    },
+                    {
+                        selector: 'node[type = "mailserver"]',
+                        style: {
+                            'background-color': '#1d4ed8',
+                            'border-color': '#3b82f6',
+                            'shape': 'triangle',
+                            'width': '26px',
+                            'height': '26px'
+                        }
+                    },
+                    {
+                        selector: 'node[type = "nameserver"]',
+                        style: {
+                            'background-color': '#7e22ce',
+                            'border-color': '#a855f7',
+                            'shape': 'diamond',
+                            'width': '26px',
+                            'height': '26px'
+                        }
+                    },
+                    {
+                        selector: 'node[type = "asn"]',
+                        style: {
+                            'background-color': '#b91c1c',
+                            'border-color': '#ef4444',
+                            'shape': 'hexagon',
+                            'width': '30px',
+                            'height': '30px',
+                            'font-size': '11px'
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 1.5,
+                            'line-color': '#262626',
+                            'target-arrow-color': '#404040',
+                            'target-arrow-shape': 'triangle',
+                            'curve-style': 'bezier',
+                            'arrow-scale': 0.8
+                        }
+                    },
+                    {
+                        selector: '.highlighted',
+                        style: {
+                            'line-color': '#ffffff',
+                            'target-arrow-color': '#ffffff',
+                            'border-color': '#ffffff',
+                            'border-width': '3px',
+                            'transition-property': 'background-color, line-color, target-arrow-color',
+                            'transition-duration': '0.3s'
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'cose',
+                    idealEdgeLength: 80,
+                    nodeOverlap: 20,
+                    refresh: 20,
+                    fit: true,
+                    padding: 30,
+                    randomize: false,
+                    componentSpacing: 100,
+                    nodeRepulsion: 400000,
+                    edgeElasticity: 100,
+                    nestingFactor: 5,
+                    gravity: 80,
+                    numIter: 1000,
+                    initialTemp: 200,
+                    coolingFactor: 0.95,
+                    minTemp: 1.0
+                }
+            });
+
+            // Node click event listener for Inspector
+            cy.on('tap', 'node', function (evt) {
+                const node = evt.target;
+                const data = node.data();
+
+                // Highlight connected components
+                cy.elements().removeClass('highlighted');
+                node.closedNeighborhood().addClass('highlighted');
+
+                const inspector = document.getElementById('nodeInspector');
+                inspector.classList.remove('hidden');
+
+                document.getElementById('inspectType').innerText = data.type;
+                document.getElementById('inspectLabel').innerText = data.label;
+
+                let detailsHtml = '';
+                if (data.metadata) {
+                    for (const [k, v] of Object.entries(data.metadata)) {
+                        if (v && v !== '-') {
+                            detailsHtml += `<div><span class="text-gray-500 uppercase">${k}:</span> <span class="text-gray-200 mono">${Array.isArray(v) ? v.join(', ') : v}</span></div>`;
+                        }
+                    }
+                }
+                document.getElementById('inspectDetails').innerHTML = detailsHtml || '<span class="italic text-gray-500">No additional metadata</span>';
+            });
+
+            cy.on('tap', function (evt) {
+                if (evt.target === cy) {
+                    cy.elements().removeClass('highlighted');
+                    document.getElementById('nodeInspector').classList.add('hidden');
+                }
+            });
+        }
+
+        function resetGraphLayout() {
+            if (!cy) return;
+            cy.layout({
+                name: 'cose',
+                fit: true,
+                padding: 30,
+                nodeRepulsion: 400000,
+                idealEdgeLength: 80
+            }).run();
+        }
+
+        function filterGraph(type) {
+            document.querySelectorAll('.graph-filter-btn').forEach(btn => {
+                if (btn.getAttribute('data-type') === type) {
+                    btn.className = 'graph-filter-btn px-2.5 py-1 rounded bg-white text-black text-xs font-medium';
+                } else {
+                    btn.className = 'graph-filter-btn px-2.5 py-1 rounded bg-gray-900 text-gray-400 hover:text-white border border-gray-800 text-xs';
+                }
+            });
+
+            if (!cy) return;
+            if (type === 'all') {
+                cy.elements().show();
+            } else {
+                cy.elements().hide();
+                const matched = cy.nodes(`[type = "${type}"]`);
+                matched.show();
+                matched.connectedEdges().show();
+                matched.neighborhood('node').show();
+            }
+            cy.fit(undefined, 30);
+        }
+
         // Render the UI from a JSON Report object
         function renderReport(report) {
             currentReportData = report;
@@ -355,10 +716,17 @@
 
             const gradeEl = document.getElementById('resGrade');
             gradeEl.innerText = report.grade || 'N/A';
-document.getElementById('resNotes').innerText = report.grading_notes || '';
+            document.getElementById('resNotes').innerText = report.grading_notes || '';
 
             if (report.grade) {
-                gradeEl.className = 'text-5xl font-bold font-serif grade-' + (report.grade.includes('A') ? 'A' : report.grade.includes('B') ? 'B' : report.grade.includes('F') ? 'F' : 'C');
+                const gradeColor = report.grade.includes('A')
+                    ? 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.7)]'
+                    : report.grade.includes('B')
+                        ? 'text-gray-300'
+                        : report.grade.includes('F')
+                            ? 'text-gray-600'
+                            : 'text-gray-400';
+                gradeEl.className = `text-5xl font-bold font-serif mb-2 ${gradeColor}`;
             }
 
             document.getElementById('resScore').innerText = report.total_score || 0;
@@ -367,6 +735,9 @@ document.getElementById('resNotes').innerText = report.grading_notes || '';
             try {
                 document.getElementById('resTime').innerText = new Date(report.scan_time).toLocaleString();
             } catch (e) { document.getElementById('resTime').innerText = report.scan_time; }
+
+            // Render Infrastructure Graph if available
+            renderGraph(report.infrastructure_graph);
 
             const modsContainer = document.getElementById('moduleResults');
             modsContainer.innerHTML = '';

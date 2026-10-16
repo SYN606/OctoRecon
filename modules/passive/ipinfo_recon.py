@@ -71,7 +71,36 @@ class IPInfoRecon(BaseModule):
                 
                 result.data.append({"Property": prop_name, "Value": data[field]})
         
-        # 4. Intelligence Scoring Logic
+        # 4. Infrastructure Graph Integration (ASN Node)
+        if hasattr(scanner.report, "infrastructure_graph") and isinstance(scanner.report.infrastructure_graph, dict):
+            graph = scanner.report.infrastructure_graph
+            graph.setdefault("nodes", [])
+            graph.setdefault("edges", [])
+            existing_node_ids = {n["id"] for n in graph["nodes"]}
+            existing_edge_keys = {f"{e['source']}->{e['target']}:{e.get('relation','')}" for e in graph["edges"]}
+            
+            raw_org = data.get("org", "")
+            if raw_org:
+                # Extract ASN tag (e.g. AS13335)
+                parts = raw_org.split(maxsplit=1)
+                asn_id = parts[0] if parts and parts[0].upper().startswith("AS") else raw_org
+                asn_node_id = f"asn:{asn_id}"
+                
+                if asn_node_id not in existing_node_ids:
+                    graph["nodes"].append({"id": asn_node_id, "label": raw_org, "type": "asn", "metadata": {"country": data.get("country"), "city": data.get("city")}})
+                    existing_node_ids.add(asn_node_id)
+                
+                ip_node_id = f"ip:{ip}"
+                if ip_node_id not in existing_node_ids:
+                    graph["nodes"].append({"id": ip_node_id, "label": ip, "type": "ip", "metadata": {}})
+                    existing_node_ids.add(ip_node_id)
+                    
+                edge_key = f"{ip_node_id}->{asn_node_id}:hosted_on"
+                if edge_key not in existing_edge_keys:
+                    graph["edges"].append({"source": ip_node_id, "target": asn_node_id, "relation": "hosted_on"})
+                    existing_edge_keys.add(edge_key)
+
+        # 5. Intelligence Scoring Logic
         org = data.get("org", "").lower()
         is_cloud = any(x in org for x in ["cloudflare", "amazon", "aws", "google", "fastly", "akamai", "microsoft", "azure", "digitalocean", "linode"])
         

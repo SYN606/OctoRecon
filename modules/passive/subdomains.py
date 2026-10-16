@@ -976,22 +976,34 @@ class Module(BaseModule):
     # =====================================================
 
     async def enrich_results(self, scanner):
+        import dns.asyncresolver
+        import dns.reversename
+        resolver = dns.asyncresolver.Resolver()
+        resolver.timeout = 2.0
+        resolver.lifetime = 4.0
 
         semaphore = asyncio.Semaphore(self.MAX_CONCURRENCY)
 
         async def worker(host):
-
             async with semaphore:
-
                 ip = await self.resolve_ip(host)
-
                 alive = await self.check_alive(
                     scanner,
                     host,
                 )
+                ptr = "-"
+                if ip and ip != "-":
+                    try:
+                        rev_name = dns.reversename.from_address(ip)
+                        answers = await resolver.resolve(rev_name, "PTR")
+                        if answers:
+                            ptr = str(answers[0]).rstrip(".")
+                    except Exception:
+                        pass
 
             self.results[host]["ip"] = ip
             self.results[host]["alive"] = alive
+            self.results[host]["ptr"] = ptr
 
         tasks = [worker(host) for host in self.results]
 
@@ -1007,9 +1019,7 @@ class Module(BaseModule):
     def build_rows(self):
 
         rows = []
-
         alive = 0
-
         dead = 0
 
         for host in sorted(self.results):
@@ -1017,20 +1027,16 @@ class Module(BaseModule):
             info = self.results[host]
 
             if info["alive"]:
-
                 status = "Alive"
-
                 alive += 1
-
             else:
-
                 status = "Dead"
-
                 dead += 1
 
             rows.append({
                 "Subdomain": host,
                 "IP": info["ip"],
+                "Reverse DNS": info.get("ptr", "-"),
                 "Status": status,
                 "Source": ", ".join(sorted(info["sources"])),
             })
@@ -1170,6 +1176,44 @@ class Module(BaseModule):
 
             description += " Issues — " + "; ".join(failures)
 
+        # Merge discovered alive subdomains into the infrastructure graph
+        if hasattr(scanner.report, "infrastructure_graph") and isinstance(scanner.report.infrastructure_graph, dict):
+            graph = scanner.report.infrastructure_graph
+            graph.setdefault("nodes", [])
+            graph.setdefault("edges", [])
+            existing_node_ids = {n["id"] for n in graph["nodes"]}
+            existing_edge_keys = {f"{e['source']}->{e['target']}:{e.get('relation','')}" for e in graph["edges"]}
+
+            root_node_id = f"domain:{self.domain}"
+            if root_node_id not in existing_node_ids:
+                graph["nodes"].append({"id": root_node_id, "label": self.domain, "type": "domain", "metadata": {}})
+                existing_node_ids.add(root_node_id)
+
+            for host, info in self.results.items():
+                if not info.get("alive"):
+                    continue
+                sub_node_id = f"subdomain:{host}"
+                if sub_node_id not in existing_node_ids:
+                    graph["nodes"].append({"id": sub_node_id, "label": host, "type": "subdomain", "metadata": {"sources": list(info.get("sources", []))}})
+                    existing_node_ids.add(sub_node_id)
+
+                sub_edge_key = f"{root_node_id}->{sub_node_id}:has_subdomain"
+                if sub_edge_key not in existing_edge_keys:
+                    graph["edges"].append({"source": root_node_id, "target": sub_node_id, "relation": "has_subdomain"})
+                    existing_edge_keys.add(sub_edge_key)
+
+                ip = info.get("ip")
+                if ip and ip != "-":
+                    ip_node_id = f"ip:{ip}"
+                    if ip_node_id not in existing_node_ids:
+                        graph["nodes"].append({"id": ip_node_id, "label": ip, "type": "ip", "metadata": {"ptr": info.get("ptr", "-")}})
+                        existing_node_ids.add(ip_node_id)
+
+                    ip_edge_key = f"{sub_node_id}->{ip_node_id}:resolves_to"
+                    if ip_edge_key not in existing_edge_keys:
+                        graph["edges"].append({"source": sub_node_id, "target": ip_node_id, "relation": "resolves_to"})
+                        existing_edge_keys.add(ip_edge_key)
+
         scanner.report.add_module(
             self.name,
             Report.table(
@@ -1177,6 +1221,7 @@ class Module(BaseModule):
                 columns=[
                     "Subdomain",
                     "IP",
+                    "Reverse DNS",
                     "Status",
                     "Source",
                 ],

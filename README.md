@@ -3,13 +3,16 @@
 
 > *Developed by **octopus**, enhanced by **[SYN606](https://syn606.wtf)***
 
-OctoRecon V2 is a high-speed, highly concurrent reconnaissance framework designed for penetration testers and security researchers. Upgraded with modern Python architectures (Asyncio, Pydantic, FastAPI), it executes 17+ intelligence modules simultaneously and outputs results beautifully to both the CLI and a sleek Web Dashboard.
+OctoRecon V2 is a high-speed, highly concurrent reconnaissance framework designed for penetration testers and security researchers. Upgraded with modern Python architectures (Asyncio, Pydantic, FastAPI), it executes 20+ intelligence modules simultaneously and outputs results beautifully to both the CLI and a sleek Web Dashboard with DNSDumpster-style interactive infrastructure mapping.
 
 ## ✨ Key Features
 - **V2 Concurrent Engine:** Blazing fast execution using Python 3.11+ `TaskGroup`.
-- **Strict Data Schemas:** Powered by Pydantic for flawless report generation.
+- **Advanced DNS Intelligence:** Comprehensive DNS record enumeration (A, AAAA, MX, NS, TXT, SOA, CNAME, CAA, SRV, PTR, DS, DNSKEY, TLSA).
+- **DNS Security & Hygiene:** Deep auditing of SPF mechanisms, DMARC policy enforcement, DNSSEC status, and dangling CNAME takeover heuristics.
+- **Infrastructure Relationship Graph:** Interactive visual network mapping (Domains, Subdomains, IPs, Mail Servers, Nameservers, ASNs) powered by Cytoscape.js.
+- **Firewall & WAF Detection:** Automated fingerprinting and active challenge probing for 15+ WAF/DDoS vendors (Cloudflare, AWS WAF, Akamai, F5, Imperva, etc.).
 - **Web Dashboard:** A gorgeous, Tailwind-powered local UI with Report Export/Import capabilities.
-- **OSINT Integrations:** Built-in support for Shodan, AlienVault, VirusTotal, and more.
+- **OSINT Integrations:** Built-in support for Shodan, AlienVault, IPInfo, VirusTotal, and more.
 - **Modular Design:** Drop new modules into `modules/` and they are auto-discovered instantly.
 
 ---
@@ -30,7 +33,7 @@ pip install -r requirements.txt
 ```
 
 ### 3. Environment Configuration (API Keys)
-To prevent rate-limiting (429 errors) and unlock deep OSINT scanning (like Shodan), you must configure your API keys:
+To prevent rate-limiting (429 errors) and unlock deep OSINT scanning (like Shodan), configure your API keys:
 
 ```powershell
 # Copy the template environment file (Windows)
@@ -48,7 +51,7 @@ Open `.env` in your text editor and add your free API keys for Shodan, AlienVaul
 ## 💻 Usage
 
 ### Launch the Web Dashboard (Recommended)
-Provides a beautiful hacker-themed UI to scan targets, export JSON reports, and read old reports offline.
+Provides a beautiful hacker-themed UI to scan targets, inspect the interactive DNSDumpster-style infrastructure graph, export JSON reports, and read old reports offline.
 ```bash
 python octorecon.py web
 ```
@@ -56,9 +59,16 @@ python octorecon.py web
 
 ### CLI Mode
 
-**List all available modules:**
+**DNS Intelligence & Infrastructure Mapping (DNSDumpster Style):**
 ```bash
-python octorecon.py list-modules
+# Full DNS record and security audit
+python octorecon.py dns example.com
+
+# Include passive subdomain enumeration and display infrastructure graph tree
+python octorecon.py dns example.com --subdomains --graph
+
+# Export full DNS intelligence report and graph relationships to JSON
+python octorecon.py dns example.com --subdomains --export example_dns.json
 ```
 
 **Run a full concurrent scan against a target:**
@@ -68,15 +78,21 @@ python octorecon.py scan https://example.com
 
 **Run specific modules only:**
 ```bash
-python octorecon.py scan https://example.com -m "Broken Links, DNS, Shodan Intelligence"
+python octorecon.py scan https://example.com -m "DNS, Firewall / WAF Detection, Shodan Intelligence"
+```
+
+**List all available modules:**
+```bash
+python octorecon.py list-modules
 ```
 
 ---
 
-## 📚 Modules Included
-- **Web:** Broken Links, Cookies, HTTP Methods, Redirects, Content Security Policy (CSP)
-- **Core:** DNS, SSL, Technology Detection, WHOIS
-- **Passive:** Emails, Javascript, Robots.txt, Security.txt, Sitemap, Subdomains, Wayback Machine, Shodan Intelligence
+## 📚 Modules Included (20 Total)
+- **Web:** Broken Links, Cookies, HTTP Methods, Redirects
+- **Core:** DNS (Advanced Records, PTR, SPF/DMARC/DNSSEC), SSL, Technology Detection, WHOIS
+- **Security:** Content Security Policy (CSP), Firewall / WAF Detection
+- **Passive:** Emails, Javascript, Server Location (IPInfo), Robots.txt, Security.txt, Shodan Intelligence, Sitemap, Subdomains (with PTR Reverse DNS), Wayback Machine
 
 ---
 

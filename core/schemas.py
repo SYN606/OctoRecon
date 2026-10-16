@@ -18,15 +18,24 @@ class FinalReport(BaseModel):
     grade: str = "N/A"
     grading_notes: str = ""
     modules: Dict[str, ModuleResult] = Field(default_factory=dict)
+    infrastructure_graph: Dict[str, Any] = Field(default_factory=dict)
 
     def add_module(self, name: str, data: dict):
         """Legacy V1 method for modules that call scanner.report.add_module directly."""
+        raw_data = data.get("rows", [])
+        if not raw_data and "data" in data and isinstance(data["data"], dict):
+            raw_data = [{"Property": k, "Value": str(v)} for k, v in data["data"].items()]
+        elif not raw_data and "items" in data and isinstance(data["items"], list):
+            raw_data = [{"Item": str(item)} for item in data["items"]]
+        elif not raw_data and "content" in data:
+            raw_data = [{"Content": data.get("content")}]
+
         self.modules[name] = ModuleResult(
             module_name=name,
             score=data.get("score", 0),
             max_score=data.get("max_score", 20),
             description=data.get("description", ""),
-            data=data.get("rows", []) or ([{"Content": data.get("content")}] if "content" in data else [])
+            data=raw_data
         )
 
     def calculate_grade(self):
@@ -47,7 +56,7 @@ class FinalReport(BaseModel):
             weight = 1.0
             
             # CRITICAL Modules (Multiplies impact by 3x)
-            if name in ["SSL", "Content Security Policy", "Shodan Intelligence", "Technology", "Headers"]:
+            if name in ["SSL", "Content Security Policy", "Shodan Intelligence", "Technology", "Headers", "Firewall / WAF Detection"]:
                 weight = 3.0
                 if module.score < (module.max_score * 0.4): 
                     has_critical_failure = True
