@@ -9,7 +9,7 @@ from urllib.parse import urljoin
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from core.base_module import BaseModule
-from core.schemas import ModuleResult
+from core.schemas import ModuleResult, Finding, Severity
 
 if TYPE_CHECKING:
     from core.scanner import Scanner
@@ -142,7 +142,7 @@ class FirewallDetection(BaseModule):
 
         # 3. Format Results
         if detected_wafs:
-            result.score = self.max_score # Having a WAF is strong security posture
+            result.score = self.max_score  # Having a WAF is strong security posture
             waf_names = list(detected_wafs.keys())
             primary_waf = waf_names[0]
             
@@ -154,11 +154,23 @@ class FirewallDetection(BaseModule):
             for waf, evidences in detected_wafs.items():
                 for evidence in evidences:
                     result.data.append({"Property": f"{waf} Evidence", "Value": evidence})
+
+            result.findings.append(Finding(
+                title=f"WAF Protection Active: {primary_waf}",
+                severity=Severity.INFO,
+                description=f"Target traffic is filtered by {', '.join(waf_names)}."
+            ))
         else:
-            result.score = 5 # Penalty: No WAF detected leaves target exposed to direct web exploits
-            result.description = "No Web Application Firewall (WAF) or DDoS protection detected. Application may be exposed directly."
-            result.data.append({"Property": "Protection Status", "Value": "Unprotected / No WAF Detected"})
-            result.data.append({"Property": "Recommendation", "Value": "Deploy a Cloud WAF (e.g. Cloudflare, AWS WAF, Fastly) to filter automated attacks and OWASP Top 10 exploits."})
+            result.score = 15  # Defense-in-depth consideration (does not trigger critical failure)
+            result.description = "No commercial Web Application Firewall (WAF) or cloud proxy detected."
+            result.data.append({"Property": "Protection Status", "Value": "No Edge WAF Detected"})
+            result.data.append({"Property": "Recommendation", "Value": "Deploy a Cloud WAF (e.g. Cloudflare, AWS WAF, Fastly) for edge DDoS mitigation and automated exploit filtering."})
+
+            result.findings.append(Finding(
+                title="No Commercial Edge WAF Detected",
+                severity=Severity.LOW,
+                description="No cloud WAF or proxy was detected. An edge WAF adds defense-in-depth against volumetric DDoS and automated exploits."
+            ))
 
         return result
 

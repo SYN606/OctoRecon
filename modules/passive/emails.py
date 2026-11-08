@@ -494,12 +494,17 @@ class Module(BaseModule):
             for js_url in self.extract_js_urls(soup, u):
                 js_to_fetch.add(js_url)
 
-        # Fetch external JS scripts concurrently
+        # Fetch external JS scripts concurrently (Check shared cache first)
+        scripts_cache = getattr(scanner, "shared_cache", {}).setdefault("scripts_content", {})
+
         async def _fetch_js(js_u):
+            if js_u in scripts_cache:
+                return scripts_cache[js_u]
             async with sem:
                 try:
                     js_resp = await self.get(scanner, js_u, follow_redirects=True, timeout=6)
                     if js_resp.status_code == 200:
+                        scripts_cache[js_u] = js_resp.text
                         return js_resp.text
                 except Exception:
                     pass
@@ -578,25 +583,15 @@ class Module(BaseModule):
         # Score Calculation
         # ==============================================
 
-        if len(emails) >= 10:
-
+        # Zero leaked emails is the ideal security posture (Full score 20/20)
+        # Exposure penalties apply based on volume and personal addresses
+        if len(emails) == 0:
             self.score = self.max_score
-
-        elif len(emails) >= 5:
-
-            self.score = 8
-
-        elif len(emails) >= 3:
-
-            self.score = 6
-
-        elif len(emails) >= 1:
-
-            self.score = 3
-
         else:
-
-            self.score = 0
+            deduction = min(len(emails) * 2, 14)
+            if personal > 0:
+                deduction = min(deduction + 3, 15)
+            self.score = max(5, self.max_score - deduction)
 
         # ==============================================
         # Description
@@ -627,13 +622,14 @@ class Module(BaseModule):
             findings.append(Finding(
                 title="No Exposed Emails Found",
                 severity=Severity.INFO,
-                description=f"Scanned {len(visited)} pages, no email addresses were found."
+                description=f"Scanned {len(visited)} pages, no public email addresses were discovered."
             ))
         else:
+            sev = Severity.MEDIUM if personal > 0 or len(emails) >= 8 else Severity.LOW
             findings.append(Finding(
-                title="Publicly Exposed Emails Discovered",
-                severity=Severity.LOW,
-                description=description
+                title="Publicly Exposed Email Addresses",
+                severity=sev,
+                description=f"Discovered {len(emails)} exposed email(s) ({official} official, {personal} personal), increasing phishing and social engineering risk."
             ))
 
         return ModuleResult(

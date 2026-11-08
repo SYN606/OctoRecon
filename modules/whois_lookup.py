@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from rich.table import Table
 
 from core.base_module import BaseModule
-from core.schemas import ModuleResult
+from core.schemas import ModuleResult, Finding, Severity
 
 # Suppress noisy socket connection errors from python-whois on unsupported modern TLDs
 logging.getLogger("whois").setLevel(logging.CRITICAL)
@@ -108,29 +108,33 @@ class Module(BaseModule):
                 domain = ext.registered_domain
 
         info_dict = {}
+        findings: list[Finding] = []
 
+        # 1. Try modern RDAP over HTTPS first (fast, reliable, port 443)
         try:
-            loop = asyncio.get_running_loop()
-            info_obj = await asyncio.wait_for(
-                loop.run_in_executor(None, whois.whois, domain),
-                timeout=self.WHOIS_TIMEOUT,
-            )
-            # Check if info_obj actually returned valid data
-            has_data = any(
-                bool(getattr(info_obj, f, None))
-                for f in ["registrar", "creation_date", "expiration_date", "name_servers"]
-            )
-            if has_data:
-                for field in self.FIELDS:
-                    info_dict[field] = getattr(info_obj, field, None)
-        except Exception:
-            info_dict = {}
-
-        # Fallback to RDAP if whois returned empty data or failed
-        if not info_dict:
             rdap_data = await self._query_rdap(scanner, domain)
             if rdap_data:
                 info_dict = rdap_data
+        except Exception:
+            info_dict = {}
+
+        # 2. Fallback to legacy port-43 python-whois if RDAP has no data
+        if not info_dict and WHOIS_AVAILABLE:
+            try:
+                loop = asyncio.get_running_loop()
+                info_obj = await asyncio.wait_for(
+                    loop.run_in_executor(None, whois.whois, domain),
+                    timeout=5,
+                )
+                has_data = any(
+                    bool(getattr(info_obj, f, None))
+                    for f in ["registrar", "creation_date", "expiration_date", "name_servers"]
+                )
+                if has_data:
+                    for field in self.FIELDS:
+                        info_dict[field] = getattr(info_obj, field, None)
+            except Exception:
+                info_dict = {}
 
         if info_dict:
             for field in self.FIELDS:
@@ -144,17 +148,35 @@ class Module(BaseModule):
             if note:
                 data["Notice"] = note
                 table.add_row("Notice", note)
+                findings.append(Finding(
+                    title="Domain Registration Expiring Soon",
+                    severity=Severity.MEDIUM,
+                    description=note
+                ))
+            else:
+                findings.append(Finding(
+                    title="Domain Registration Active",
+                    severity=Severity.INFO,
+                    description=f"Domain registered via {info_dict.get('registrar', 'Registrar')}."
+                ))
         else:
-            score = 0
-            data = {"Error": f"Unable to retrieve WHOIS or RDAP records for {domain}"}
-            table.add_row("Error", data["Error"])
+            # Neutral result: scanner/RDAP unable to query TLD, do not penalize target
+            score = max_score
+            data = {"Notice": f"WHOIS/RDAP record query unavailable for {domain}"}
+            table.add_row("Notice", data["Notice"])
+            findings.append(Finding(
+                title="WHOIS Data Unavailable",
+                severity=Severity.INFO,
+                description=f"WHOIS / RDAP query yielded no public records for {domain}."
+            ))
 
         scanner.console.print(table)
         return ModuleResult(
             module_name=self.name,
             score=score,
             max_score=max_score,
-            description="Domain registration and ownership information.",
+            description="Collect domain registration, registrar, and expiration intelligence.",
+            findings=findings,
             data=[{"Property": k, "Value": str(v)} for k, v in data.items()]
         )
 

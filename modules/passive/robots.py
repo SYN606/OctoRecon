@@ -7,7 +7,7 @@ from urllib.parse import urljoin
 from rich.table import Table
 
 from core.base_module import BaseModule
-from core.schemas import ModuleResult
+from core.schemas import ModuleResult, Finding, Severity
 
 class Module(BaseModule):
     name = "robots"
@@ -38,12 +38,17 @@ class Module(BaseModule):
                     if hasattr(scanner, "shared_cache"):
                         scanner.shared_cache["robots"] = text
                 else:
-                    result.score = 10
+                    result.score = self.max_score
                     result.description = f"robots.txt not found (HTTP {response.status_code})."
                     result.data = [{"Directive": "Status", "Value": f"Not Found (HTTP {response.status_code})"}]
+                    result.findings.append(Finding(
+                        title="robots.txt Not Present",
+                        severity=Severity.INFO,
+                        description="No robots.txt policy was detected (standard for many modern apps)."
+                    ))
                     return result
             except Exception as e:
-                result.score = 0
+                result.score = self.max_score
                 result.description = f"Unable to fetch robots.txt: {e}"
                 result.data = [{"Directive": "Status", "Value": "Fetch Failed"}]
                 return result
@@ -53,6 +58,7 @@ class Module(BaseModule):
         disallow = 0
         sitemaps = []
         score = self.max_score
+        sensitive_hits = []
 
         for line in text.splitlines():
             line = line.strip()
@@ -69,7 +75,8 @@ class Module(BaseModule):
                 disallow += 1
                 rows.append({"Directive": "Disallow", "Value": val})
                 if any(kw in val.lower() for kw in self.SENSITIVE_KEYWORDS):
-                    score = max(0, score - 1)
+                    score = max(5, score - 2)
+                    sensitive_hits.append(val)
             elif lower.startswith("sitemap:"):
                 val = line.split(":", 1)[1].strip()
                 sitemaps.append(val)
@@ -85,6 +92,19 @@ class Module(BaseModule):
 
         if rows:
             scanner.console.print(table)
+
+        if sensitive_hits:
+            result.findings.append(Finding(
+                title="Sensitive Disallow Paths in robots.txt",
+                severity=Severity.LOW,
+                description=f"robots.txt reveals sensitive administrative or internal paths: {', '.join(sensitive_hits[:5])}"
+            ))
+        else:
+            result.findings.append(Finding(
+                title="robots.txt Analyzed",
+                severity=Severity.INFO,
+                description=f"Discovered {allow} Allow and {disallow} Disallow directives without sensitive leaks."
+            ))
 
         result.score = score
         result.description = f"Found {allow} Allow, {disallow} Disallow, and {len(sitemaps)} Sitemap directive(s)."

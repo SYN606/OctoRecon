@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import config
 
 from core.base_module import BaseModule
-from core.schemas import ModuleResult
+from core.schemas import ModuleResult, Finding, Severity
 
 if TYPE_CHECKING:
     from core.scanner import Scanner
@@ -53,22 +53,27 @@ class ShodanRecon(BaseModule):
             result.score = 0
             return result
             
-        # 4. Handle API Errors gracefully
+        # 4. Handle API Errors gracefully (never penalize target for scanner API issues)
         if response.status_code == 401:
-            result.description = "Invalid Shodan API Key."
-            result.score = 0
+            result.description = "Shodan API authentication failed (check SHODAN_API_KEY in .env)."
+            result.score = self.max_score
             return result
         elif response.status_code == 404:
             result.description = f"No historical Shodan data found for IP: {ip}"
             result.score = self.max_score
             return result
         elif response.status_code == 429:
-            result.description = "Shodan API rate limit exceeded."
-            result.score = 0
+            result.description = "Shodan API rate limit reached (target not penalized)."
+            result.score = self.max_score
+            result.findings.append(Finding(
+                title="Shodan Rate Limit Reached",
+                severity=Severity.INFO,
+                description="The Shodan API query could not complete due to rate limiting; scan skipped without security penalty."
+            ))
             return result
         elif response.status_code != 200:
-            result.description = f"Shodan API error (HTTP {response.status_code})"
-            result.score = 0
+            result.description = f"Shodan API request returned HTTP {response.status_code}."
+            result.score = self.max_score
             return result
             
         # 5. Parse Intelligence Data
@@ -84,18 +89,37 @@ class ShodanRecon(BaseModule):
         result.data.append({"Property": "ISP", "Value": isp})
         result.data.append({"Property": "Open Ports", "Value": ", ".join(map(str, ports)) if ports else "None"})
         
-        # 6. Intelligent Scoring System
+        # 6. Intelligent Scoring System & Findings Generation
         score = self.max_score
         
         if vulns:
             result.data.append({"Property": "Vulnerabilities (CVEs)", "Value": ", ".join(vulns)})
-            score = max(0, score - (len(vulns) * 5)) # Heavily penalize for missing patches/CVEs
+            score = max(0, score - (len(vulns) * 5))
+            for cve in vulns[:5]:
+                result.findings.append(Finding(
+                    title=f"Shodan CVE Disclosed: {cve}",
+                    severity=Severity.HIGH,
+                    description=f"Host exhibits unpatched vulnerability {cve} according to Shodan banners."
+                ))
             
         if ports:
             # Penalize slightly for every open port beyond standard web ports (80, 443)
             non_standard_ports = [p for p in ports if p not in [80, 443, 8080, 8443]]
             if non_standard_ports:
-                score = max(0, score - len(non_standard_ports))
+                score = max(0, score - min(len(non_standard_ports) * 2, 8))
+                dangerous_ports = [p for p in non_standard_ports if p in [21, 22, 23, 25, 445, 1433, 1521, 3306, 3389, 5432, 6379, 27017]]
+                if dangerous_ports:
+                    result.findings.append(Finding(
+                        title="Database / Remote Admin Ports Exposed",
+                        severity=Severity.HIGH,
+                        description=f"Sensitive non-web ports are open to the public Internet: {dangerous_ports}"
+                    ))
+                else:
+                    result.findings.append(Finding(
+                        title="Non-Standard Ports Detected",
+                        severity=Severity.LOW,
+                        description=f"Detected open ports: {non_standard_ports}"
+                    ))
         
         result.score = score
         result.description = f"Analyzed {ip}: Found {len(ports)} open ports and {len(vulns)} known CVEs."

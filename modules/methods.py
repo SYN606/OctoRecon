@@ -7,7 +7,7 @@ VERSION : 2.0.0
 import httpx
 from rich.table import Table
 from core.base_module import BaseModule
-from core.schemas import ModuleResult
+from core.schemas import ModuleResult, Finding, Severity
 
 class MethodScanner(BaseModule):
     name = "HTTP Methods"
@@ -78,8 +78,13 @@ class MethodScanner(BaseModule):
             ]
 
         if request_failed:
-            result.score = 0
-            result.description = "Enumerates supported HTTP methods. Skipped: OPTIONS request failed."
+            result.score = self.max_score
+            result.description = "OPTIONS request failed or blocked by firewall; methods check skipped."
+            result.findings.append(Finding(
+                title="HTTP Methods Probe Blocked",
+                severity=Severity.INFO,
+                description="OPTIONS request timed out or was blocked by firewall; skipped without security penalty."
+            ))
             return result
 
         no_allow_header = not methods
@@ -92,6 +97,23 @@ class MethodScanner(BaseModule):
                 score -= self.DANGEROUS_WEIGHTS[method]
                 if method == "TRACE":
                     status = "Enabled (XST risk)"
+                    result.findings.append(Finding(
+                        title="Cross-Site Tracing Enabled (TRACE)",
+                        severity=Severity.HIGH,
+                        description="HTTP TRACE is enabled on the server, exposing session tokens to Cross-Site Tracing (XST) attacks."
+                    ))
+                elif method in ("PUT", "DELETE"):
+                    result.findings.append(Finding(
+                        title=f"Insecure HTTP Method: {method}",
+                        severity=Severity.MEDIUM,
+                        description=f"HTTP {method} method is advertised as supported, which may allow unauthorized resource modification."
+                    ))
+                elif method == "CONNECT":
+                    result.findings.append(Finding(
+                        title="HTTP CONNECT Method Enabled",
+                        severity=Severity.LOW,
+                        description="HTTP CONNECT proxy tunneling method is enabled."
+                    ))
 
             table.add_row(
                 method,
@@ -110,9 +132,21 @@ class MethodScanner(BaseModule):
             status = "Enabled (WebDAV)" if is_watch else "Enabled (unlisted)"
             if is_watch:
                 score -= 3
+                result.findings.append(Finding(
+                    title=f"WebDAV Method Enabled: {method}",
+                    severity=Severity.LOW,
+                    description=f"WebDAV method '{method}' is active on the server."
+                ))
 
             table.add_row(method, f"[red]{status}[/red]")
             result.data.append({"Method": method, "Status": status})
+
+        if not result.findings and methods:
+            result.findings.append(Finding(
+                title="HTTP Methods Hardened",
+                severity=Severity.INFO,
+                description=f"Supported methods ({', '.join(methods)}) adhere to standard safe operations."
+            ))
 
         result.score = max(score, 0)
         scanner.console.print(table)

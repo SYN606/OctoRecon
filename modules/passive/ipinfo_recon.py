@@ -48,16 +48,16 @@ class IPInfoRecon(BaseModule):
             response = await scanner.client.get(url)
         except Exception as e:
             result.description = f"IPInfo request failed: {e}"
-            result.score = 0
+            result.score = self.max_score
             return result
             
         if response.status_code == 429:
-            result.description = "IPInfo rate limit exceeded (1,000 requests/day free tier hit)."
-            result.score = 0
+            result.description = "IPInfo rate limit exceeded (1,000 requests/day free tier hit; scan skipped without penalty)."
+            result.score = self.max_score
             return result
         elif response.status_code != 200:
-            result.description = f"IPInfo API error (HTTP {response.status_code})"
-            result.score = 0
+            result.description = f"IPInfo API returned HTTP {response.status_code}."
+            result.score = self.max_score
             return result
             
         data = response.json()

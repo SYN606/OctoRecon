@@ -82,60 +82,141 @@ class FinalReport(BaseModel):
         )
 
     def calculate_grade(self):
-        # 1. Base Scores (Displayed in UI)
-        self.total_score = sum(m.score for m in self.modules.values())
-        self.max_potential_score = sum(m.max_score for m in self.modules.values())
+        """
+        Industry-standard Deductive Security Posture Grading Engine
+        (Inspired by Mozilla Observatory, SSL Labs, and OWASP ASVS).
         
-        if self.max_potential_score == 0:
+        Separates Security Audit modules from Reconnaissance/OSINT asset discovery,
+        evaluates verified Findings by Severity, and applies defensive posture caps.
+        """
+        if not self.modules:
+            self.grade = "N/A"
+            self.total_score = 0
+            self.max_potential_score = 100
             return
 
-        # 2. Weighted Scoring System (Affects final letter grade)
-        total_weighted_score = 0
-        total_weighted_max = 0
-        has_critical_failure = False
-        has_high_failure = False
+        # Security Posture Audit Modules vs Inventory/Recon Modules
+        AUDIT_MODULES = {
+            "SSL",
+            "Headers",
+            "Content Security Policy",
+            "Cookies",
+            "DNS",
+            "HTTP Methods",
+            "Redirects",
+            "Firewall / WAF Detection",
+            "Technology",
+            "securitytxt",
+        }
+
+        audit_modules_run = [m for name, m in self.modules.items() if name in AUDIT_MODULES]
+
+        if not audit_modules_run:
+            # Only recon/inventory modules (e.g. subdomains, whois, wayback) were executed
+            self.total_score = 100
+            self.max_potential_score = 100
+            self.grade = "N/A"
+            self.grading_notes = "Informational recon scan only; security posture grade requires security audit modules."
+            return
+
+        # 1. Base Score starts at 100 (Full Security Baseline)
+        MODULE_DEDUCTION_CAPS = {
+            "SSL": 40,
+            "Headers": 25,
+            "Content Security Policy": 20,
+            "Cookies": 15,
+            "DNS": 15,
+            "HTTP Methods": 15,
+            "Redirects": 15,
+            "Technology": 25,
+            "Firewall / WAF Detection": 10,
+            "securitytxt": 5,
+        }
+
+        total_deduction = 0
+        critical_count = 0
+        high_count = 0
+        medium_count = 0
+        low_count = 0
+
+        # Collect unique findings and calculate module-bounded deductions
+        seen_findings = set()
+        critical_reasons = []
+        high_reasons = []
 
         for name, module in self.modules.items():
-            weight = 1.0
-            
-            # CRITICAL Modules (Multiplies impact by 3x)
-            if name in ["SSL", "Content Security Policy", "Shodan Intelligence", "Technology", "Headers", "Firewall / WAF Detection"]:
-                weight = 3.0
-                if module.score < (module.max_score * 0.4): 
-                    has_critical_failure = True
-                    self.grading_notes = f"Critical security failure detected in {name}."
-            
-            # HIGH Modules (Multiplies impact by 2x)
-            elif name in ["Cookies", "HTTP Methods", "DNS", "Redirects"]:
-                weight = 2.0
-                if module.score < (module.max_score * 0.4):
-                    has_high_failure = True
-                    if not self.grading_notes: 
-                        self.grading_notes = f"High security warning detected in {name}."
-            
-            total_weighted_score += (module.score * weight)
-            total_weighted_max += (module.max_score * weight)
+            mod_deduction = 0
+            for f in module.findings:
+                # Deduplicate findings across modules
+                key = (f.severity, f.title.strip().lower())
+                if key in seen_findings:
+                    continue
+                seen_findings.add(key)
 
-        # 3. Calculate Percentage
-        percentage = (total_weighted_score / total_weighted_max) * 100 if total_weighted_max > 0 else 0
-        
-        # 4. Granular Grading Scale (+ / -)
-        if percentage >= 97: self.grade = "A+"
-        elif percentage >= 93: self.grade = "A"
-        elif percentage >= 90: self.grade = "A-"
-        elif percentage >= 87: self.grade = "B+"
-        elif percentage >= 83: self.grade = "B"
-        elif percentage >= 80: self.grade = "B-"
-        elif percentage >= 77: self.grade = "C+"
-        elif percentage >= 73: self.grade = "C"
-        elif percentage >= 70: self.grade = "C-"
-        elif percentage >= 60: self.grade = "D"
+                if f.severity == Severity.CRITICAL:
+                    critical_count += 1
+                    mod_deduction += 35
+                    critical_reasons.append(f.title)
+                elif f.severity == Severity.HIGH:
+                    high_count += 1
+                    mod_deduction += 15
+                    high_reasons.append(f.title)
+                elif f.severity == Severity.MEDIUM:
+                    medium_count += 1
+                    mod_deduction += 6
+                elif f.severity == Severity.LOW:
+                    low_count += 1
+                    mod_deduction += 2
+
+            # Cap deductions per module category (Mozilla Observatory / SSL Labs standard)
+            cap = MODULE_DEDUCTION_CAPS.get(name, 20)
+            total_deduction += min(mod_deduction, cap)
+
+        base_score = max(0, 100 - total_deduction)
+
+        # 2. Defense-in-Depth Posture Bonuses (Max +10 bonus)
+        bonus = 0
+        waf_mod = self.modules.get("Firewall / WAF Detection")
+        if waf_mod and waf_mod.score == 20:
+            bonus += 5  # Verified active WAF protection
+
+        dns_mod = self.modules.get("DNS")
+        if dns_mod and any("DNSSEC Validated" in str(row) for row in dns_mod.data):
+            bonus += 3  # Cryptographic DNSSEC assurance
+
+        base_score = min(100, max(0, base_score + bonus))
+        self.total_score = base_score
+        self.max_potential_score = 100
+
+        # 3. Granular Percentage-to-Grade Scale
+        if base_score >= 95: self.grade = "A+"
+        elif base_score >= 90: self.grade = "A"
+        elif base_score >= 85: self.grade = "A-"
+        elif base_score >= 80: self.grade = "B+"
+        elif base_score >= 75: self.grade = "B"
+        elif base_score >= 70: self.grade = "B-"
+        elif base_score >= 65: self.grade = "C+"
+        elif base_score >= 60: self.grade = "C"
+        elif base_score >= 55: self.grade = "C-"
+        elif base_score >= 45: self.grade = "D"
         else: self.grade = "F"
-        
-        # 5. Severity Caps (Mozilla Observatory / SSL Labs style logic)
-        if has_critical_failure and percentage >= 60:
+
+        # 4. Strict Severity Caps (SSL Labs & Mozilla Observatory Style)
+        # A website with critical/high security issues cannot receive a passing A/B grade.
+        notes = []
+        if critical_count > 0:
             self.grade = "F"
-            self.grading_notes += " Grade capped at F."
-        elif has_high_failure and percentage >= 77:
-            self.grade = "C"
-            self.grading_notes += " Grade capped at C."
+            notes.append(f"Grade capped at F due to {critical_count} CRITICAL finding(s): {', '.join(critical_reasons[:2])}")
+        elif high_count > 0:
+            if self.grade in ("A+", "A", "A-", "B+", "B", "B-"):
+                self.grade = "C"
+                notes.append(f"Grade capped at C due to {high_count} HIGH severity finding(s): {', '.join(high_reasons[:2])}")
+        elif medium_count > 0:
+            if self.grade in ("A+", "A", "A-"):
+                self.grade = "B"
+                notes.append(f"Grade capped at B due to {medium_count} MEDIUM severity finding(s).")
+
+        if bonus > 0 and critical_count == 0:
+            notes.append(f"+{bonus} defense-in-depth posture bonus applied.")
+
+        self.grading_notes = " | ".join(notes) if notes else "All security posture checks passed cleanly."

@@ -3289,11 +3289,21 @@ class TechnologyScanner(BaseModule):
         # ---- Passive detection (no extra network calls) ----
         self.detect()
 
-        # ---- Active recon (extra network calls) ----
         client = getattr(scanner, "client", None)
 
+        # Lightweight passive assists (favicon, robots/sitemap cache)
         if client is not None:
+            try:
+                await asyncio.gather(
+                    self.detect_favicon(scanner),
+                    self.detect_robots_sitemap(scanner),
+                    return_exceptions=True
+                )
+            except Exception:
+                pass
 
+        # ---- Active path fuzzing (gated strictly behind --active mode) ----
+        if client is not None and getattr(scanner, "active_mode", False):
             try:
                 await self._detect_soft_404(scanner)
                 await asyncio.gather(
@@ -3301,19 +3311,12 @@ class TechnologyScanner(BaseModule):
                     self.detect_admin_panels(scanner),
                     self.detect_api_endpoints(scanner),
                     self.detect_sourcemaps(scanner),
-                    self.detect_favicon(scanner),
-                    self.detect_robots_sitemap(scanner),
                     return_exceptions=True
                 )
             except Exception as e:
                 scanner.console.print(
-                    f"[yellow]Technology module: active recon partially failed ({e}).[/yellow]"
+                    f"[yellow]Technology module: active path probing partially failed ({e}).[/yellow]"
                 )
-        else:
-            scanner.console.print(
-                "[yellow]Technology module: no HTTP client available, "
-                "skipping active recon (sensitive files, admin panels, etc).[/yellow]"
-            )
 
         self.flag_outdated()
 
@@ -3393,7 +3396,7 @@ class TechnologyScanner(BaseModule):
                         "confidence": t.confidence,
                         "evidence": t.evidence,
                     }
-                    for t in self.detected.values()
+                    for t in self.tech.values()
                 ],
                 "findings": self.findings,
                 "rows": rows,

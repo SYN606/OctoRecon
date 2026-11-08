@@ -6,7 +6,7 @@ VERSION : 2.0.0
 
 from rich.table import Table
 from core.base_module import BaseModule
-from core.schemas import ModuleResult
+from core.schemas import ModuleResult, Finding, Severity
 
 class RedirectScanner(BaseModule):
     name = "Redirects"
@@ -41,7 +41,13 @@ class RedirectScanner(BaseModule):
                     "Status": str(item.status_code),
                     "URL": str(item.url),
                 })
-            score = max(0, score - len(history))
+            if len(history) > 3:
+                score = max(5, score - 3)
+                result.findings.append(Finding(
+                    title="Excessive Redirect Chain Hops",
+                    severity=Severity.LOW,
+                    description=f"Request required {len(history)} redirect hops, slowing page load and increasing hijacking risk."
+                ))
 
         # Final destination
         table.add_row(
@@ -52,6 +58,21 @@ class RedirectScanner(BaseModule):
             "Status": str(scanner.response.status_code),
             "URL": str(scanner.response.url),
         })
+
+        final_url_str = str(scanner.response.url)
+        if final_url_str.startswith("http://"):
+            score = max(0, score - 6)
+            result.findings.append(Finding(
+                title="Plaintext HTTP In Use (No HTTPS Enforcement)",
+                severity=Severity.HIGH,
+                description="Final destination is served over unencrypted HTTP (port 80) rather than encrypted HTTPS."
+            ))
+        elif final_url_str.startswith("https://") and history:
+            result.findings.append(Finding(
+                title="HTTPS Redirection Enforced",
+                severity=Severity.INFO,
+                description="Traffic is automatically upgraded and redirected to HTTPS."
+            ))
 
         result.score = score
         result.description = "HTTP redirect chain followed before reaching the final response."

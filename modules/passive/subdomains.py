@@ -920,59 +920,32 @@ class Module(BaseModule):
     # =====================================================
 
     async def check_alive(self, scanner, hostname):
-
+        headers = self._headers()
+        # Fast non-blocking web server probe with short timeout
         for scheme in ("https", "http"):
-
             url = f"{scheme}://{hostname}"
-
-            headers = self._headers()
-
-            # HEAD Request
             try:
-
                 response = await self.head(
                     scanner,
                     url,
                     follow_redirects=True,
                     headers=headers,
-                    timeout=self.HTTP_TIMEOUT,
+                    timeout=2.5,
                 )
-
-                if response.status_code < 400:
+                if response.status_code < 400 or response.status_code in (401, 403):
                     return True
-
-                # Some websites don't allow HEAD
                 if response.status_code == 405:
-
-                    response = await self.get(
+                    resp = await self.get(
                         scanner,
                         url,
-                        follow_redirects=True,
+                        follow_redirects=False,
                         headers=headers,
-                        timeout=self.HTTP_TIMEOUT,
+                        timeout=2.5,
                     )
-
-                    if response.status_code < 400:
+                    if resp.status_code < 400 or resp.status_code in (401, 403):
                         return True
-
             except Exception:
-
-                try:
-
-                    response = await self.get(
-                        scanner,
-                        url,
-                        follow_redirects=True,
-                        headers=headers,
-                        timeout=self.HTTP_TIMEOUT,
-                    )
-
-                    if response.status_code < 400:
-                        return True
-
-                except Exception:
-                    pass
-
+                continue
         return False
 
     # =====================================================
@@ -1053,32 +1026,9 @@ class Module(BaseModule):
     # =====================================================
 
     def calculate_score(self):
-
-        total = len(self.results)
-
-        if total > 50:
-
-            self.score = self.max_score
-
-        elif total >= 21:
-
-            self.score = 8
-
-        elif total >= 11:
-
-            self.score = 6
-
-        elif total >= 6:
-
-            self.score = 4
-
-        elif total >= 1:
-
-            self.score = 2
-
-        else:
-
-            self.score = 0
+        # Subdomain discovery is an asset enumeration inventory.
+        # Having fewer subdomains is not penalized.
+        self.score = self.max_score
 
     # =====================================================
     # Prepare Module

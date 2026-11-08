@@ -290,6 +290,8 @@ def show_scan(scan_id: int = typer.Argument(..., help="Scan ID from database his
     console.rule(f"[bold cyan]Scan #{scan_id}: {scan_entry.get('target')}[/bold cyan]")
     console.print(f"[bold]Grade    :[/bold] {rep.get('grade', 'N/A')}")
     console.print(f"[bold]Score    :[/bold] {rep.get('total_score')}/{rep.get('max_potential_score')}")
+    if rep.get("grading_notes"):
+        console.print(f"[bold yellow]Notes    :[/bold yellow] {rep.get('grading_notes')}")
     console.print(f"[bold]Timestamp:[/bold] {scan_entry.get('timestamp')}")
     
     table = Table(title="Module Scores", header_style="bold green")

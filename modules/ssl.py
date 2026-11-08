@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from rich.table import Table
 
 from core.base_module import BaseModule
-from core.schemas import ModuleResult
+from core.schemas import ModuleResult, Finding, Severity
 
 WEAK_CIPHER_MARKERS = (
     "RC4",
@@ -82,10 +82,9 @@ class SSLScanner(BaseModule):
         table.add_column("Value")
 
         data = {}
-
         score = 0
-
         max_score = 30
+        module_findings: list[Finding] = []
 
         if not hostname:
 
@@ -97,14 +96,14 @@ class SSLScanner(BaseModule):
             for key, value in data.items():
                 table.add_row(key, str(value))
             scanner.console.print(table)
-            result = ModuleResult(
+            return ModuleResult(
                 module_name=self.name,
                 score=0,
                 max_score=max_score,
-                description="Unable to inspect SSL certificate.",
+                description="Unable to inspect SSL certificate: no valid hostname.",
+                findings=[Finding(title="Invalid Hostname for SSL", severity=Severity.HIGH, description="Hostname could not be extracted.")],
                 data=[{"Property": k, "Value": str(v)} for k, v in data.items()]
             )
-            return result
 
         loop = asyncio.get_running_loop()
 
@@ -169,6 +168,11 @@ class SSLScanner(BaseModule):
                 "Status": "Invalid",
                 "Error": f"SSL handshake failed: {e}",
             }
+            module_findings.append(Finding(
+                title="SSL/TLS Handshake Failed or Invalid Certificate",
+                severity=Severity.CRITICAL,
+                description=f"SSL negotiation failed: {e}. Target certificate may be expired, self-signed, or untrusted."
+            ))
 
         except socket.gaierror:
 
@@ -237,15 +241,33 @@ class SSLScanner(BaseModule):
 
             findings = []
 
-            if days_remaining > 90:
-                score += 10
-            elif days_remaining > 30:
-                score += 7
-            elif days_remaining > 7:
-                score += 4
+            if days_remaining <= 0:
+                findings.append(f"Certificate expired ({abs(days_remaining)} days ago).")
+                module_findings.append(Finding(
+                    title="SSL Certificate Expired",
+                    severity=Severity.CRITICAL,
+                    description=f"TLS certificate expired on {expiry.strftime('%Y-%m-%d')} ({abs(days_remaining)} days ago)."
+                ))
+            elif days_remaining <= 7:
+                score += 3
+                findings.append("Certificate expires imminently.")
+                module_findings.append(Finding(
+                    title="SSL Certificate Expiring Imminently",
+                    severity=Severity.HIGH,
+                    description=f"TLS certificate expires in {days_remaining} day(s)."
+                ))
+            elif days_remaining <= 30:
+                score += 6
                 findings.append("Certificate expires soon.")
+                module_findings.append(Finding(
+                    title="SSL Certificate Expiring Soon",
+                    severity=Severity.MEDIUM,
+                    description=f"TLS certificate expires in {days_remaining} days."
+                ))
+            elif days_remaining <= 90:
+                score += 8
             else:
-                findings.append("Certificate is about to expire.")
+                score += 10
 
             if tls_version in (
                     "TLSv1.3",
@@ -254,14 +276,31 @@ class SSLScanner(BaseModule):
                 score += 10
             else:
                 findings.append(f"Outdated TLS version ({tls_version}).")
+                module_findings.append(Finding(
+                    title=f"Outdated TLS Protocol ({tls_version})",
+                    severity=Severity.HIGH,
+                    description=f"Server negotiates legacy protocol {tls_version}, vulnerable to known protocol downgrade attacks."
+                ))
 
             weak_cipher = any(marker in cipher_name.upper()
                               for marker in WEAK_CIPHER_MARKERS)
 
             if weak_cipher:
                 findings.append(f"Weak cipher detected ({cipher_name}).")
+                module_findings.append(Finding(
+                    title=f"Weak Cipher Suite: {cipher_name}",
+                    severity=Severity.HIGH,
+                    description=f"Server negotiated deprecated or insecure cipher {cipher_name}."
+                ))
             else:
                 score += 10
+
+            if not module_findings:
+                module_findings.append(Finding(
+                    title="TLS Configuration Valid",
+                    severity=Severity.INFO,
+                    description=f"Strong TLS negotiation: {tls_version} with cipher {cipher_name} ({days_remaining} days remaining)."
+                ))
 
             score = max(
                 0,
@@ -323,5 +362,6 @@ class SSLScanner(BaseModule):
             score=score,
             max_score=max_score,
             description=description,
+            findings=module_findings,
             data=[{"Property": k, "Value": str(v)} for k, v in data.items()]
         )

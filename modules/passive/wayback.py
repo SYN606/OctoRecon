@@ -322,32 +322,20 @@ class Module(BaseModule):
     # =====================================================
 
     def calculate_score(self):
-
-        self.score = 0
+        # Start at max score (20); deduct for exposed sensitive historical endpoints
+        self.score = self.max_score
+        penalty = 0
 
         for info in self.results.values():
-
             category = info.get("category")
-
             if category == "Archive":
-
-                self.score += 5
-
+                penalty += 3
             elif category == "Admin":
+                penalty += 2
+            elif category in ("API", "Login"):
+                penalty += 1
 
-                self.score += 3
-
-            elif category == "API":
-
-                self.score += 2
-
-            elif category == "Login":
-
-                self.score += 1
-
-        if self.score > self.max_score:
-
-            self.score = self.max_score
+        self.score = max(5, self.max_score - min(penalty, 15))
 
     # =====================================================
     # Console Summary (condensed — full data goes to the report)

@@ -109,18 +109,27 @@ class Module(BaseModule):
         js_files = sorted(set(js_files))
 
         # ---------------------------------------
-        # Analyze JavaScript Files Concurrently
+        # Analyze JavaScript Files Concurrently (with Shared Cache)
         # ---------------------------------------
         sem = asyncio.Semaphore(15)
+        scripts_cache = getattr(scanner, "shared_cache", {}).setdefault("scripts_content", {})
 
         async def _analyze_js(js):
-            try:
-                async with sem:
-                    r = await self.get(scanner, js, timeout=8)
-            except Exception:
+            if js in scripts_cache:
+                text = scripts_cache[js]
+            else:
+                try:
+                    async with sem:
+                        r = await self.get(scanner, js, timeout=8)
+                    text = r.text if r.status_code == 200 else ""
+                    if text:
+                        scripts_cache[js] = text
+                except Exception:
+                    return None
+
+            if not text:
                 return None
 
-            text = r.text
             local_sm = []
             local_ws = []
             local_fb = []
@@ -392,7 +401,7 @@ class Module(BaseModule):
             summary=description,
             findings=findings,
             data={
-                "scripts_count": len(scripts),
+                "scripts_count": len(js_files),
                 "api_hits": api_hits,
                 "secret_hits": [{"type": t, "preview": p} for t, p in secret_hits],
                 "source_maps": source_maps,

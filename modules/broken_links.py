@@ -17,7 +17,7 @@ import httpx
 from bs4 import BeautifulSoup
 from rich.table import Table
 from core.base_module import BaseModule
-from core.schemas import ModuleResult
+from core.schemas import ModuleResult, Finding, Severity
 
 SOCIAL_DOMAINS = {
     "facebook.com",
@@ -316,7 +316,25 @@ class BrokenLinkScanner(BaseModule):
 
     async def run(self, scanner):
 
-        response = scanner.response
+        response = getattr(scanner, "response", None)
+        if response is None or not getattr(response, "text", None):
+            try:
+                response = await scanner.client.get(scanner.target)
+            except Exception as e:
+                return ModuleResult(
+                    module_name=self.name,
+                    score=20,
+                    max_score=20,
+                    description=f"Unable to fetch target page: {e}",
+                    findings=[
+                        Finding(
+                            title="Broken Links Check Skipped",
+                            severity=Severity.INFO,
+                            description=f"Target page could not be retrieved: {e}"
+                        )
+                    ],
+                    data=[]
+                )
 
         extractor = LinkExtractor(
             scanner.target,
@@ -450,10 +468,25 @@ class BrokenLinkScanner(BaseModule):
                 "URL": item["url"],
             })
 
+        findings: list[Finding] = []
+        if summary["broken"] > 0:
+            findings.append(Finding(
+                title="Broken Links Detected",
+                severity=Severity.LOW,
+                description=f"Identified {summary['broken']} broken link(s) or dead resources, impacting integrity and potential dangling asset hijack."
+            ))
+        else:
+            findings.append(Finding(
+                title="No Broken Links Detected",
+                severity=Severity.INFO,
+                description="All surveyed links and resources resolved with valid HTTP status codes."
+            ))
+
         return ModuleResult(
             module_name=self.name,
             score=max(score, 0),
             max_score=max_score,
             description="Checks internal, external and static resource links for availability.",
+            findings=findings,
             data=rows
         )

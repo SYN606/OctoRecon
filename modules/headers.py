@@ -8,7 +8,7 @@ from rich.markup import escape
 from rich.table import Table
 from config import SECURITY_HEADERS
 from core.base_module import BaseModule
-from core.schemas import ModuleResult
+from core.schemas import ModuleResult, Finding, Severity
 
 # Headers that leak information about the tech stack — being present
 # is a (minor) negative, not neutral.
@@ -98,9 +98,36 @@ class HeaderScanner(BaseModule):
                     score += round(points * 0.3)
                     status = f"Misconfigured ({note})"
                     status_display = f"[yellow]{status}[/yellow]"
+                    result.findings.append(Finding(
+                        title=f"Misconfigured Security Header: {header}",
+                        severity=Severity.LOW,
+                        description=f"Header '{header}' is present but suboptimal: {note}"
+                    ))
             else:
                 status = "Missing"
                 status_display = f"[red]{status}[/red]"
+                # Standardized severity tiering based on OWASP / Mozilla Observatory
+                if header == "Strict-Transport-Security":
+                    result.findings.append(Finding(
+                        title="Missing Strict-Transport-Security (HSTS)",
+                        severity=Severity.HIGH,
+                        description="HSTS is missing; connections are vulnerable to SSL stripping and man-in-the-middle downgrade attacks."
+                    ))
+                elif header == "X-Frame-Options":
+                    result.findings.append(Finding(
+                        title="Missing Clickjacking Protection (X-Frame-Options)",
+                        severity=Severity.MEDIUM,
+                        description="Page lacks frame embedding restrictions, making it vulnerable to clickjacking."
+                    ))
+                elif header == "Content-Security-Policy":
+                    # CSP module provides deep inspection, but record missing flag if both omitted
+                    pass
+                else:
+                    result.findings.append(Finding(
+                        title=f"Missing Security Header: {header}",
+                        severity=Severity.LOW,
+                        description=f"Recommended defense-in-depth header '{header}' is not configured."
+                    ))
 
             value_display = escape(raw_value) if raw_value else "-"
             table.add_row(header, status_display, value_display)
@@ -128,6 +155,11 @@ class HeaderScanner(BaseModule):
                     "Status": "Disclosed",
                     "Value": raw_value,
                 })
+                result.findings.append(Finding(
+                    title=f"Technology Banner Disclosed: {header}",
+                    severity=Severity.LOW,
+                    description=f"Header reveals software fingerprint: '{raw_value}'."
+                ))
 
         score = max(score - disclosure_penalty, 0)
         scanner.console.print(table)

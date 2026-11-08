@@ -16,7 +16,7 @@ import dns.reversename
 from rich.table import Table
 
 from core.base_module import BaseModule
-from core.schemas import ModuleResult
+from core.schemas import ModuleResult, Finding, Severity
 
 DANGLING_CNAME_TARGETS = [
     "github.io",
@@ -262,6 +262,11 @@ class DNSScanner(BaseModule):
             if "-all" in spf_record:
                 spf_rating = "Strict (Hard Fail -all)"
                 spf_details = "Secure policy preventing unauthorized email spoofing."
+                result.findings.append(Finding(
+                    title="Strict SPF Policy Configured (-all)",
+                    severity=Severity.INFO,
+                    description="SPF hard fail policy blocks unauthorized senders."
+                ))
             elif "~all" in spf_record:
                 spf_rating = "Acceptable (Soft Fail ~all)"
                 spf_details = "Soft fail configured; acceptable during rollout."
@@ -269,6 +274,11 @@ class DNSScanner(BaseModule):
                 spf_rating = "Insecure (+all Allowed)"
                 spf_details = "DANGEROUS: Permits any IP to send mail on behalf of domain."
                 score -= 4
+                result.findings.append(Finding(
+                    title="Insecure SPF Policy (+all Allowed)",
+                    severity=Severity.HIGH,
+                    description="SPF record explicitly allows any host on the Internet to send mail on behalf of the domain."
+                ))
             else:
                 spf_rating = "Neutral (?all)"
                 spf_details = "Neutral qualifier configured."
@@ -280,6 +290,11 @@ class DNSScanner(BaseModule):
                 "Details": f"Record: {spf_record[:60]}... | {spf_details}"
             })
         else:
+            result.findings.append(Finding(
+                title="Missing SPF Record",
+                severity=Severity.HIGH,
+                description="Domain lacks an SPF TXT record; email receivers cannot authenticate authorized sending IPs."
+            ))
             result.data.append({
                 "Category": "DNS Security",
                 "Item": "SPF Policy",
@@ -297,9 +312,20 @@ class DNSScanner(BaseModule):
             if "p=reject" in dmarc_record.lower():
                 d_policy = "Reject (Enforced - Maximum Security)"
                 score += 2
+                result.findings.append(Finding(
+                    title="DMARC Policy Enforced (p=reject)",
+                    severity=Severity.INFO,
+                    description="DMARC reject policy ensures spoofed emails are rejected by receiving mail servers."
+                ))
             elif "p=quarantine" in dmarc_record.lower():
                 d_policy = "Quarantine (Spam Folder Enforcement)"
                 score += 1
+            else:
+                result.findings.append(Finding(
+                    title="DMARC Monitoring Only (p=none)",
+                    severity=Severity.MEDIUM,
+                    description="DMARC policy is set to p=none; fraudulent emails are delivered rather than blocked."
+                ))
                 
             rua_match = [part for part in dmarc_record.split(";") if "rua=" in part.lower()]
             rua_status = "Aggregate Reports Active" if rua_match else "No Reporting Configured"
@@ -312,6 +338,11 @@ class DNSScanner(BaseModule):
                 "Details": f"Policy: {d_policy} | {rua_status}"
             })
         else:
+            result.findings.append(Finding(
+                title="Missing DMARC Policy",
+                severity=Severity.HIGH,
+                description="No _dmarc record detected; receiving mail servers have no instructions to reject spoofed emails."
+            ))
             result.data.append({
                 "Category": "DNS Security",
                 "Item": "DMARC Policy",
@@ -328,6 +359,11 @@ class DNSScanner(BaseModule):
             dnssec_status = "Signed & Enabled"
             dnssec_detail = f"DS: {'Yes' if has_ds else 'No'} | DNSKEY: {'Yes' if has_dnskey else 'No'}"
             dnssec_eval = "Pass"
+            result.findings.append(Finding(
+                title="DNSSEC Cryptographically Signed",
+                severity=Severity.INFO,
+                description="Zone is signed with DNSSEC, preventing DNS spoofing and cache poisoning."
+            ))
         else:
             dnssec_status = "Unsigned (Disabled)"
             dnssec_detail = "Zone is not cryptographically signed with DNSSEC."
@@ -371,6 +407,11 @@ class DNSScanner(BaseModule):
                 target_ips = await self._resolve_host_ips(cname_target)
                 if not target_ips:
                     score = max(0, score - 8)
+                    result.findings.append(Finding(
+                        title=f"Potential Dangling CNAME / Subdomain Takeover: {cname_target}",
+                        severity=Severity.CRITICAL,
+                        description=f"CNAME points to an unclaimed cloud service ({matching_provider}) that does not resolve."
+                    ))
                     result.data.append({
                         "Category": "DNS Security",
                         "Item": "Potential Dangling DNS / Takeover",

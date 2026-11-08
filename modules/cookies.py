@@ -7,7 +7,7 @@ VERSION : 2.0.0
 from rich.table import Table
 from http.cookies import SimpleCookie
 from core.base_module import BaseModule
-from core.schemas import ModuleResult
+from core.schemas import ModuleResult, Finding, Severity
 
 class CookieScanner(BaseModule):
     name = "Cookies"
@@ -79,16 +79,27 @@ class CookieScanner(BaseModule):
                     else:
                         samesite = "Missing"
 
+                    is_session = any(k in name.lower() for k in ["sess", "auth", "token", "jwt", "login", "user", "secret", "sid"])
+                    is_analytics = any(k in name.lower() for k in ["_ga", "_gid", "_gat", "_fbp", "utm", "analytics", "kndctr", "mp_", "_cf_c", "_cf_bm", "ajs_"])
+
                     issues = []
                     if not is_secure and scanner.target.startswith("https"):
                         issues.append("Missing Secure")
                         score = max(0, score - 2)
-                    if not is_httponly:
+                    if not is_httponly and not is_analytics:
                         issues.append("Missing HttpOnly")
                         score = max(0, score - 2)
-                    if samesite in ("Missing", "None"):
+                    if samesite in ("Missing", "None") and not is_analytics:
                         issues.append(f"SameSite={samesite}")
                         score = max(0, score - 1)
+
+                    if issues:
+                        sev = Severity.HIGH if (is_session and ("Missing Secure" in issues or "Missing HttpOnly" in issues)) else Severity.MEDIUM
+                        result.findings.append(Finding(
+                            title=f"Insecure Cookie Flags: {name}",
+                            severity=sev,
+                            description=f"Cookie '{name}' lacks required security hardening flags: {', '.join(issues)}."
+                        ))
 
                     status = "[red]" + ", ".join(issues) + "[/red]" if issues else "[green]Secure[/green]"
                     status_clean = ", ".join(issues) if issues else "Secure"
