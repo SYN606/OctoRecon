@@ -5,6 +5,7 @@ Version : 1.0.0
 """
 
 import time
+import asyncio
 
 from urllib.parse import (
     urljoin,
@@ -13,13 +14,10 @@ from urllib.parse import (
 
 import httpx
 
-from core.report_schema import Report
-
 from bs4 import BeautifulSoup
-
 from rich.table import Table
-
 from core.base_module import BaseModule
+from core.schemas import ModuleResult
 
 SOCIAL_DOMAINS = {
     "facebook.com",
@@ -179,6 +177,7 @@ class LinkChecker:
             method,
             url,
             follow_redirects=True,
+            timeout=8.0,
         )
 
         elapsed = round(
@@ -349,14 +348,28 @@ class BrokenLinkScanner(BaseModule):
             "total": len(links),
         }
 
-        results = []
+        # Check all extracted links concurrently with bounded semaphore
+        sem = asyncio.Semaphore(25)
 
-        for item in links:
+        async def _check_bounded(item):
+            async with sem:
+                try:
+                    return await checker.check(item)
+                except Exception as e:
+                    return {
+                        "url": item.get("url", ""),
+                        "type": item.get("type", "unknown"),
+                        "status": f"ERROR ({e})",
+                        "status_code": None,
+                        "response_time": None,
+                        "content_type": "-",
+                        "redirects": 0,
+                        "broken": True,
+                    }
 
-            result = await checker.check(item)
+        results = await asyncio.gather(*(_check_bounded(item) for item in links))
 
-            results.append(result)
-
+        for result in results:
             link_type = result["type"]
 
             if link_type in summary:
@@ -437,21 +450,10 @@ class BrokenLinkScanner(BaseModule):
                 "URL": item["url"],
             })
 
-        scanner.report.add_module(
-            self.name,
-            Report.table(
-                title="Broken Link Scanner",
-                columns=[
-                    "Type",
-                    "Status",
-                    "HTTP Code",
-                    "Response Time",
-                    "URL",
-                ],
-                rows=rows,
-                score=max(score, 0),
-                max_score=max_score,
-                description=
-                "Checks internal, external and static resource links for availability.",
-            ),
+        return ModuleResult(
+            module_name=self.name,
+            score=max(score, 0),
+            max_score=max_score,
+            description="Checks internal, external and static resource links for availability.",
+            data=rows
         )

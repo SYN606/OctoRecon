@@ -6,7 +6,7 @@ VERSION : 1.0.0
 from rich.table import Table
 
 from core.base_module import BaseModule
-from core.report_schema import Report
+from core.models import ModuleResult, Finding, Severity
 
 
 class Module(BaseModule):
@@ -40,20 +40,24 @@ class Module(BaseModule):
 
         self.reset_score()
 
-        try:
-            response = await self.get(scanner, scanner.target)
-        except Exception as e:
-            scanner.report.add_module(
-                self.name,
-                Report.text(
-                    title="Content Security Policy",
-                    content=str(e),
-                    score=0,
-                    max_score=self.max_score,
-                    description="Unable to retrieve target.",
-                ),
-            )
-            return
+        response = getattr(scanner, "response", None)
+        if response is None:
+            try:
+                response = await self.get(scanner, scanner.target)
+            except Exception as e:
+                return ModuleResult(
+                    name=self.name,
+                    category=self.category,
+                    summary="Unable to retrieve target.",
+                    findings=[
+                        Finding(
+                            title="Target Unreachable",
+                            severity=Severity.HIGH,
+                            description=str(e),
+                        )
+                    ],
+                    data={"error": str(e), "score": 0, "max_score": self.max_score},
+                )
 
         csp_headers = response.headers.get_list("Content-Security-Policy") \
             if hasattr(response.headers, "get_list") \
@@ -87,17 +91,19 @@ class Module(BaseModule):
                     "instead — it reports violations but does not enforce them."
                 )
 
-            scanner.report.add_module(
-                self.name,
-                Report.text(
-                    title="Content Security Policy",
-                    content=content,
-                    score=0,
-                    max_score=self.max_score,
-                    description="No CSP header detected.",
-                ),
+            return ModuleResult(
+                name=self.name,
+                category=self.category,
+                summary="No CSP header detected.",
+                findings=[
+                    Finding(
+                        title="Missing Content Security Policy",
+                        severity=Severity.MEDIUM,
+                        description=content,
+                    )
+                ],
+                data={"found": False, "report_only": bool(report_only), "score": 0, "max_score": self.max_score},
             )
-            return
 
         # directive -> set of values (deduplicated, merged across repeated
         # directives / multiple combined headers)
@@ -232,56 +238,35 @@ class Module(BaseModule):
 
         scanner.console.print(table)
 
-        # ----------------------------------
-        # Report
-        # ----------------------------------
+        module_findings: list[Finding] = []
+        for finding in findings:
+            sev = Severity.HIGH if any(marker in finding for marker in critical_markers) else Severity.MEDIUM
+            module_findings.append(Finding(
+                title=f"Insecure CSP Directive: {finding.split(':')[0]}",
+                severity=sev,
+                description=finding,
+            ))
 
-        scanner.report.add_module(
-            self.name,
-            Report.table(
-                title="Content Security Policy Analysis",
-                columns=[
-                    "Directive",
-                    "Values",
-                    "Status",
-                ],
-                rows=rows,
-                score=final_score,
-                max_score=self.max_score,
-                description=description,
-            ),
+        for directive in missing:
+            module_findings.append(Finding(
+                title=f"Missing Recommended CSP Directive: {directive}",
+                severity=Severity.LOW,
+                description=f"Recommended directive '{directive}' is omitted from Content-Security-Policy.",
+            ))
+
+        return ModuleResult(
+            name=self.name,
+            category=self.category,
+            summary=description,
+            findings=module_findings,
+            data={
+                "status": status,
+                "report_only": bool(report_only),
+                "directives": {k: sorted(list(v)) for k, v in directives.items()},
+                "missing": missing,
+                "findings": findings,
+                "rows": rows,
+                "score": final_score,
+                "max_score": self.max_score,
+            }
         )
-
-        # ----------------------------------
-        # Findings Summary
-        # ----------------------------------
-
-        if findings:
-            scanner.report.add_module(
-                "csp_findings",
-                Report.list(
-                    title="CSP Security Findings",
-                    items=findings,
-                    score=0,
-                    max_score=0,
-                    description=
-                    f"{len(findings)} potentially insecure CSP configuration(s) detected.",
-                ),
-            )
-
-        # ----------------------------------
-        # Missing Directives Summary
-        # ----------------------------------
-
-        if missing:
-            scanner.report.add_module(
-                "csp_missing",
-                Report.list(
-                    title="Missing Recommended Directives",
-                    items=missing,
-                    score=0,
-                    max_score=0,
-                    description=
-                    "Recommended CSP directives that are not configured.",
-                ),
-            )

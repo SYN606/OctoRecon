@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 from urllib.parse import urlparse
 import socket
+from typing import Any, Callable, Dict, List, Optional
 from rich.console import Console
 
 from core.http_client import HTTPClient
@@ -10,12 +11,31 @@ from core.schemas import FinalReport, ModuleResult
 from core.module_loader import load_modules
 from core.base_module import BaseModule
 from config import REPORT_DIR
+import database
 
 import io
 console = Console()
 
+async def async_resolve_ip(hostname: str) -> str:
+    """Non-blocking DNS resolution on the asyncio event loop."""
+    try:
+        loop = asyncio.get_running_loop()
+        addr_info = await loop.getaddrinfo(hostname, None, family=socket.AF_INET)
+        if addr_info and addr_info[0] and addr_info[0][4]:
+            return addr_info[0][4][0]
+    except Exception:
+        pass
+    return "N/A"
+
 class Scanner:
-    def __init__(self, target: str, selected_modules: list[str] = None, quiet: bool = False):
+    def __init__(
+        self,
+        target: str,
+        selected_modules: Optional[List[str]] = None,
+        quiet: bool = False,
+        active_mode: bool = False,
+        on_progress: Optional[Callable[[Dict[str, Any]], Any]] = None
+    ):
         self.quiet = quiet
         if self.quiet:
             self.console = Console(file=io.StringIO(), quiet=True)
@@ -25,11 +45,15 @@ class Scanner:
         self.response = None
         self.target = target.strip() if target else ""
         self.selected_modules = selected_modules
+        self.active_mode = active_mode
+        self.on_progress = on_progress
+        self.shared_cache: Dict[str, Any] = {}
         self.client = HTTPClient()
         self.report = FinalReport(target=self.target)
         self.modules = load_modules()
         self.started_at = None
         self.finished_at = None
+        self.scan_id = None
 
     async def connect(self) -> bool:
         self.started_at = datetime.now()
@@ -49,10 +73,9 @@ class Scanner:
         for candidate in candidates:
             parsed = urlparse(candidate)
             hostname = parsed.hostname or "Unknown"
-            try:
-                server_ip = socket.gethostbyname(hostname)
-            except Exception:
-                server_ip = "N/A"
+            
+            # Non-blocking async DNS resolution
+            server_ip = await async_resolve_ip(hostname)
 
             if not self.quiet:
                 self.console.print(f"[cyan][*][/cyan] Connecting to [bold]{candidate}[/bold]...")
@@ -64,6 +87,11 @@ class Scanner:
                 self.response = await self.client.get(candidate)
                 self.target = candidate
                 self.report.target = candidate
+                # Populate shared cache with the baseline response
+                self.shared_cache["root_response"] = self.response
+                self.shared_cache["root_html"] = self.response.text
+                self.shared_cache["server_ip"] = server_ip
+                
                 status = self.response.status_code
                 if not self.quiet:
                     if 200 <= status < 300:
@@ -86,27 +114,67 @@ class Scanner:
         if not self.quiet:
             self.console.rule("[bold cyan]Running Modules Concurrently (V2 Engine)[/bold cyan]")
         
+        def _normalize(text: str) -> str:
+            return "".join(c for c in text.lower() if c.isalnum())
+
         to_run = self.modules
         if self.selected_modules:
-            to_run = [m for m in self.modules if m.name.lower() in [s.lower() for s in self.selected_modules]]
+            targets = []
+            for s in self.selected_modules:
+                for sub in str(s).split(","):
+                    sub_clean = sub.strip()
+                    if sub_clean:
+                        targets.append(_normalize(sub_clean))
+
+            def _matches(mod):
+                names = [mod.name, getattr(mod, "slug", ""), getattr(mod, "category", "")]
+                names.extend(getattr(mod, "aliases", []))
+                norm_names = [_normalize(n) for n in names if n]
+                return any(t in norm_names or any(t == nn or t in nn for nn in norm_names) for t in targets)
+
+            to_run = [m for m in self.modules if _matches(m)]
 
         if not to_run:
             if not self.quiet:
                 self.console.print("[red][!] No valid modules found to run.[/red]")
             return
 
+        total_modules = len(to_run)
+        completed_count = 0
+
+        async def _run_and_notify(mod):
+            nonlocal completed_count
+            res = await self._safe_run(mod)
+            completed_count += 1
+            if self.on_progress:
+                try:
+                    prog_data = {
+                        "module": mod.name,
+                        "status": "completed",
+                        "completed": completed_count,
+                        "total": total_modules,
+                        "percent": int((completed_count / total_modules) * 100)
+                    }
+                    if asyncio.iscoroutinefunction(self.on_progress):
+                        await self.on_progress(prog_data)
+                    else:
+                        self.on_progress(prog_data)
+                except Exception:
+                    pass
+            return res
+
         # Python 3.11+ TaskGroup for safe, highly concurrent execution
         if self.quiet:
             async with asyncio.TaskGroup() as tg:
                 tasks = {
-                    module.name: tg.create_task(self._safe_run(module)) 
+                    module.name: tg.create_task(_run_and_notify(module)) 
                     for module in to_run
                 }
         else:
             with self.console.status(f"[cyan]Executing {len(to_run)} modules concurrently...[/cyan]", spinner="bouncingBar"):
                 async with asyncio.TaskGroup() as tg:
                     tasks = {
-                        module.name: tg.create_task(self._safe_run(module)) 
+                        module.name: tg.create_task(_run_and_notify(module)) 
                         for module in to_run
                     }
 
@@ -145,13 +213,27 @@ class Scanner:
             self.console.rule(f"[bold green]Scan Complete - Grade: {self.report.grade}[/bold green]")
             self.console.print(f"[bold magenta]Duration   :[/bold magenta] {duration:.2f} sec")
         
-        # Save JSON
+        # Save JSON file
         REPORT_DIR.mkdir(parents=True, exist_ok=True)
         filename = f"{self.target.replace('https://','').replace('http://','').replace('/','_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         path = REPORT_DIR / filename
         
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(self.report.model_dump_json(indent=4))
             
         if not self.quiet:
             self.console.print(f"[cyan]JSON Report saved to {path}[/cyan]")
+
+        # Save to SQLite Database
+        try:
+            self.scan_id = await database.save_scan(
+                target=self.target,
+                report_dict=self.report.model_dump(mode="json"),
+                duration=duration,
+                grade=self.report.grade
+            )
+            if not self.quiet:
+                self.console.print(f"[green]Report indexed in SQLite database (ID: {self.scan_id})[/green]")
+        except Exception as e:
+            if not self.quiet:
+                self.console.print(f"[yellow][!] Could not save to database: {e}[/yellow]")

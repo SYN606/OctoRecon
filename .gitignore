@@ -40,7 +40,9 @@ venv.bak/
 # =========================
 reports/
 logs/
-database/
+database/*.db
+database/*.sqlite*
+database/*.db-journal
 *.json
 *.html
 

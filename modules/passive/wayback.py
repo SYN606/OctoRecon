@@ -14,6 +14,7 @@ from urllib.parse import (
 )
 
 from core.base_module import BaseModule
+from core.models import ModuleResult, Finding, Severity
 
 
 class Module(BaseModule):
@@ -420,8 +421,6 @@ class Module(BaseModule):
 
         rows, summary = self.build_rows()
 
-        from core.report_schema import Report
-
         self.print_console_summary(scanner, rows, summary)
 
         self.calculate_score()
@@ -429,19 +428,39 @@ class Module(BaseModule):
         description = (f"Collected {len(self.results)} unique historical URLs "
                        "from the Internet Archive Wayback Machine.")
 
-        scanner.report.add_module(
-            self.name,
-            Report.table(
-                title="Wayback Machine",
-                columns=[
-                    "URL",
-                    "Category",
-                    "Risk",
-                    "Timestamp",
-                ],
-                rows=rows,
-                description=description,
-                score=self.score,
-                max_score=self.max_score,
-            ),
+        findings: list[Finding] = []
+        for row in rows:
+            risk = row.get("Risk", "").upper()
+            if risk == "HIGH":
+                findings.append(Finding(
+                    title=f"High Risk Historical URL: {row.get('Category')}",
+                    severity=Severity.HIGH,
+                    description=f"{row.get('URL')} (Archived: {row.get('Timestamp')})"
+                ))
+            elif risk == "MEDIUM":
+                findings.append(Finding(
+                    title=f"Medium Risk Historical URL: {row.get('Category')}",
+                    severity=Severity.MEDIUM,
+                    description=f"{row.get('URL')} (Archived: {row.get('Timestamp')})"
+                ))
+
+        if not findings and rows:
+            findings.append(Finding(
+                title="Historical URLs Discovered",
+                severity=Severity.INFO,
+                description=f"Discovered {len(rows)} archived URL(s) from Wayback Machine."
+            ))
+
+        return ModuleResult(
+            name=self.name,
+            category=self.category,
+            summary=description,
+            findings=findings,
+            data={
+                "total_results": len(self.results),
+                "summary": summary,
+                "rows": rows,
+                "score": self.score,
+                "max_score": self.max_score,
+            }
         )

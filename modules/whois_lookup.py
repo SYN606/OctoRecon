@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from rich.table import Table
 
 from core.base_module import BaseModule
-from core.report_schema import Report
+from core.schemas import ModuleResult
 
 # Suppress noisy socket connection errors from python-whois on unsupported modern TLDs
 logging.getLogger("whois").setLevel(logging.CRITICAL)
@@ -75,44 +75,31 @@ class Module(BaseModule):
         if not WHOIS_AVAILABLE:
             table.add_row("Status", "python-whois package not installed")
             scanner.console.print(table)
-            scanner.report.add_module(
-                self.name,
-                Report.keyvalue(
-                    title="WHOIS",
-                    data={
-                        "Status": "Unavailable",
-                        "Error": "python-whois package not installed"
-                    },
-                    score=0,
-                    max_score=max_score,
-                    description="WHOIS lookup could not be performed.",
-                ),
+            return ModuleResult(
+                module_name=self.name,
+                score=0,
+                max_score=max_score,
+                description="WHOIS lookup could not be performed (python-whois missing).",
+                data=[{"Property": "Status", "Value": "Unavailable"}]
             )
-            return
 
         hostname = urlparse(scanner.target).hostname
 
         if not hostname or self._is_ip_or_local(hostname):
             data = {
-                "Status":
-                "Skipped",
-                "Reason":
-                "Target is an IP address or localhost, not a registrable domain"
+                "Status": "Skipped",
+                "Reason": "Target is an IP address or localhost, not a registrable domain"
             }
             table.add_row("Status", "Skipped")
             table.add_row("Reason", data["Reason"])
             scanner.console.print(table)
-            scanner.report.add_module(
-                self.name,
-                Report.keyvalue(
-                    title="WHOIS Information",
-                    data=data,
-                    score=max_score,
-                    max_score=max_score,
-                    description="WHOIS lookup skipped for IP/localhost target.",
-                ),
+            return ModuleResult(
+                module_name=self.name,
+                score=max_score,
+                max_score=max_score,
+                description="WHOIS lookup skipped for IP/localhost target.",
+                data=[{"Property": k, "Value": str(v)} for k, v in data.items()]
             )
-            return
 
         domain = hostname
         if TLDEXTRACT_AVAILABLE:
@@ -123,9 +110,9 @@ class Module(BaseModule):
         info_dict = {}
 
         try:
+            loop = asyncio.get_running_loop()
             info_obj = await asyncio.wait_for(
-                asyncio.get_event_loop().run_in_executor(
-                    None, whois.whois, domain),
+                loop.run_in_executor(None, whois.whois, domain),
                 timeout=self.WHOIS_TIMEOUT,
             )
             # Check if info_obj actually returned valid data
@@ -163,15 +150,12 @@ class Module(BaseModule):
             table.add_row("Error", data["Error"])
 
         scanner.console.print(table)
-        scanner.report.add_module(
-            self.name,
-            Report.keyvalue(
-                title="WHOIS Information",
-                data=data,
-                score=score,
-                max_score=max_score,
-                description="Domain registration and ownership information.",
-            ),
+        return ModuleResult(
+            module_name=self.name,
+            score=score,
+            max_score=max_score,
+            description="Domain registration and ownership information.",
+            data=[{"Property": k, "Value": str(v)} for k, v in data.items()]
         )
 
     async def _query_rdap(self, scanner, domain: str) -> dict:

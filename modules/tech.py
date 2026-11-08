@@ -5,6 +5,7 @@ VERSION : 1.0.0
 """
 
 from __future__ import annotations
+import asyncio
 import base64
 import re
 import uuid
@@ -16,32 +17,21 @@ from bs4 import BeautifulSoup
 from rich.table import Table
 
 from core.base_module import BaseModule
-from core.report_schema import Report
+from core.models import ModuleResult, Finding, Severity
 
-# ==========================================================
 # Technology Object
-# ==========================================================
-
-
 @dataclass
 class Technology:
-
     name: str
-
     category: str
-
     version: str = "-"
-
     confidence: int = 0
-
     evidence: list[str] = field(default_factory=list)
 
 
-# ==========================================================
+
 # Header Signatures (regex match against a specific header)
 # Categories: Web Server, Backend
-# ==========================================================
-
 HEADER_SIGNATURES = {
     "Server": {
         "Apache": {
@@ -2980,127 +2970,105 @@ class TechnologyScanner(BaseModule):
         return True
 
     async def detect_sensitive_files(self, scanner):
-
         base = self._base_url(scanner)
+        sem = asyncio.Semaphore(15)
 
-        for path, label in SENSITIVE_PATHS.items():
-
+        async def _probe(path, label):
             url = urljoin(base, path)
-
             try:
-                response = await scanner.client.get(url,
-                                                    timeout=8,
-                                                    follow_redirects=False)
+                async with sem:
+                    response = await scanner.client.get(url, timeout=6, follow_redirects=False)
+                if self._is_real_hit(response):
+                    self.findings["sensitive_files"].append(f"{path} — {label}")
+                    self.add_detection(
+                        name=label,
+                        category="Exposed File",
+                        confidence=90,
+                        evidence=f"HTTP 200: {path}",
+                    )
             except Exception:
-                continue
+                pass
 
-            if not self._is_real_hit(response):
-                continue
-
-            self.findings["sensitive_files"].append(f"{path} — {label}")
-
-            self.add_detection(
-                name=label,
-                category="Exposed File",
-                confidence=90,
-                evidence=f"HTTP 200: {path}",
-            )
+        await asyncio.gather(*(_probe(p, l) for p, l in SENSITIVE_PATHS.items()))
 
     async def detect_admin_panels(self, scanner):
-
         base = self._base_url(scanner)
+        sem = asyncio.Semaphore(15)
 
-        for path, (name, category) in ADMIN_PANEL_PATHS.items():
-
+        async def _probe(path, name, category):
             url = urljoin(base, path)
-
             try:
-                response = await scanner.client.get(url,
-                                                    timeout=8,
-                                                    follow_redirects=True)
+                async with sem:
+                    response = await scanner.client.get(url, timeout=6, follow_redirects=True)
+                if self._is_real_hit(response):
+                    self.findings["admin_panels"].append(f"{path} — {name}")
+                    self.add_detection(
+                        name=name,
+                        category=category,
+                        confidence=75,
+                        evidence=f"Accessible: {path} (HTTP {response.status_code})",
+                    )
             except Exception:
-                continue
+                pass
 
-            if not self._is_real_hit(response):
-                continue
-
-            self.findings["admin_panels"].append(f"{path} — {name}")
-
-            self.add_detection(
-                name=name,
-                category=category,
-                confidence=75,
-                evidence=f"Accessible: {path} (HTTP {response.status_code})",
-            )
+        await asyncio.gather(*(_probe(p, n, c) for p, (n, c) in ADMIN_PANEL_PATHS.items()))
 
     async def detect_api_endpoints(self, scanner):
-
         base = self._base_url(scanner)
+        sem = asyncio.Semaphore(15)
 
-        for path, label in API_ENDPOINT_PATHS.items():
-
+        async def _probe(path, label):
             url = urljoin(base, path)
-
             try:
-                response = await scanner.client.get(url,
-                                                    timeout=8,
-                                                    follow_redirects=True)
+                async with sem:
+                    response = await scanner.client.get(url, timeout=6, follow_redirects=True)
+                if response is not None and response.status_code in (200, 400, 401, 403):
+                    if response.status_code == 200 and not self._is_real_hit(response):
+                        return
+                    self.findings["api_endpoints"].append(f"{path} — {label} (HTTP {response.status_code})")
+                    self.add_detection(
+                        name=label,
+                        category="API",
+                        confidence=60,
+                        evidence=f"{path} responded HTTP {response.status_code}",
+                    )
             except Exception:
-                continue
+                pass
 
-            if response is None or response.status_code not in (200, 400, 401,
-                                                                403):
-                continue
-
-            if response.status_code == 200 and not self._is_real_hit(response):
-                continue
-
-            self.findings["api_endpoints"].append(
-                f"{path} — {label} (HTTP {response.status_code})")
-
-            self.add_detection(
-                name=label,
-                category="API",
-                confidence=60,
-                evidence=f"{path} responded HTTP {response.status_code}",
-            )
+        await asyncio.gather(*(_probe(p, l) for p, l in API_ENDPOINT_PATHS.items()))
 
     async def detect_sourcemaps(self, scanner):
-
         base = self._base_url(scanner)
         checked = set()
+        to_probe = []
 
         for script in self.soup.find_all("script", src=True):
-
             src = script.get("src", "")
-
             if not src.endswith(".js") or src in checked:
                 continue
-
             checked.add(src)
-
             if len(checked) > 10:
-                # Cap how many script sources we probe per run.
                 break
+            to_probe.append(urljoin(base, src + ".map"))
 
-            map_url = urljoin(base, src + ".map")
-
+        sem = asyncio.Semaphore(10)
+        async def _probe(map_url):
             try:
-                response = await scanner.client.get(map_url, timeout=8)
+                async with sem:
+                    response = await scanner.client.get(map_url, timeout=6)
+                if self._is_real_hit(response):
+                    self.findings["sourcemaps"].append(map_url)
+                    self.add_detection(
+                        name="Exposed Source Map",
+                        category="Information Disclosure",
+                        confidence=85,
+                        evidence=f"HTTP 200: {map_url}",
+                    )
             except Exception:
-                continue
+                pass
 
-            if not self._is_real_hit(response):
-                continue
-
-            self.findings["sourcemaps"].append(map_url)
-
-            self.add_detection(
-                name="Exposed Source Map",
-                category="Information Disclosure",
-                confidence=85,
-                evidence=f"HTTP 200: {map_url}",
-            )
+        if to_probe:
+            await asyncio.gather(*(_probe(u) for u in to_probe))
 
     async def detect_favicon(self, scanner):
 
@@ -3144,26 +3112,28 @@ class TechnologyScanner(BaseModule):
             )
 
     async def detect_robots_sitemap(self, scanner):
-
         base = self._base_url(scanner)
+        cache = getattr(scanner, "shared_cache", {})
 
         for path in ("/robots.txt", "/sitemap.xml"):
+            cache_key = "robots" if "robots" in path else "sitemap"
+            text = cache.get(cache_key)
+            if not text:
+                url = urljoin(base, path)
+                try:
+                    response = await scanner.client.get(url, timeout=6)
+                    if response is not None and response.status_code == 200:
+                        text = response.text if hasattr(response, "text") else ""
+                        cache[cache_key] = text
+                except Exception:
+                    continue
 
-            url = urljoin(base, path)
-
-            try:
-                response = await scanner.client.get(url, timeout=8)
-            except Exception:
+            if not text:
                 continue
 
-            if response is None or response.status_code != 200:
-                continue
-
-            text = response.text if hasattr(response, "text") else ""
             lower = text.lower()
 
             if "wp-admin" in lower or "wp-includes" in lower:
-
                 self.add_detection(
                     name="WordPress",
                     category="CMS",
@@ -3172,7 +3142,6 @@ class TechnologyScanner(BaseModule):
                 )
 
             if "/administrator/" in lower:
-
                 self.add_detection(
                     name="Joomla",
                     category="CMS",
@@ -3181,7 +3150,6 @@ class TechnologyScanner(BaseModule):
                 )
 
             if "/user/" in lower and "drupal" not in lower:
-
                 self.add_detection(
                     name="Drupal",
                     category="CMS",
@@ -3328,12 +3296,15 @@ class TechnologyScanner(BaseModule):
 
             try:
                 await self._detect_soft_404(scanner)
-                await self.detect_sensitive_files(scanner)
-                await self.detect_admin_panels(scanner)
-                await self.detect_api_endpoints(scanner)
-                await self.detect_sourcemaps(scanner)
-                await self.detect_favicon(scanner)
-                await self.detect_robots_sitemap(scanner)
+                await asyncio.gather(
+                    self.detect_sensitive_files(scanner),
+                    self.detect_admin_panels(scanner),
+                    self.detect_api_endpoints(scanner),
+                    self.detect_sourcemaps(scanner),
+                    self.detect_favicon(scanner),
+                    self.detect_robots_sitemap(scanner),
+                    return_exceptions=True
+                )
             except Exception as e:
                 scanner.console.print(
                     f"[yellow]Technology module: active recon partially failed ({e}).[/yellow]"
@@ -3364,98 +3335,69 @@ class TechnologyScanner(BaseModule):
                 "\n".join(tech.evidence),
             ])
 
-        scanner.report.add_module(
-            self.name,
-            Report.table(
-                title="Technology Detection",
-                columns=[
-                    "Category",
-                    "Technology",
-                    "Version",
-                    "Confidence",
-                    "Evidence",
+        findings: list[Finding] = []
+
+        for item in self.findings["sensitive_files"]:
+            findings.append(Finding(
+                title=f"Exposed Sensitive File: {item}",
+                severity=Severity.HIGH,
+                description=f"Potentially sensitive file accessible on the target: {item}"
+            ))
+
+        for item in self.findings["admin_panels"]:
+            findings.append(Finding(
+                title=f"Accessible Admin Panel: {item}",
+                severity=Severity.MEDIUM,
+                description=f"Admin/DB-admin panel accessible without authentication: {item}"
+            ))
+
+        for item in self.findings["outdated"]:
+            findings.append(Finding(
+                title=f"Outdated Technology: {item}",
+                severity=Severity.MEDIUM,
+                description=f"Detected outdated or EOL technology: {item}"
+            ))
+
+        for item in self.findings["sourcemaps"]:
+            findings.append(Finding(
+                title=f"Exposed Source Map: {item}",
+                severity=Severity.LOW,
+                description=f"JavaScript source map exposed in production: {item}"
+            ))
+
+        for item in self.findings["database"]:
+            findings.append(Finding(
+                title=f"Database Fingerprint: {item}",
+                severity=Severity.INFO,
+                description=f"Database engine signal: {item}"
+            ))
+
+        for item in self.findings["api_endpoints"]:
+            findings.append(Finding(
+                title=f"Discovered API Endpoint: {item}",
+                severity=Severity.INFO,
+                description=f"API/schema-discovery path responded: {item}"
+            ))
+
+        return ModuleResult(
+            name=self.name,
+            category=self.category,
+            summary=self._build_description(),
+            findings=findings,
+            data={
+                "technologies": [
+                    {
+                        "name": t.name,
+                        "category": t.category,
+                        "version": t.version,
+                        "confidence": t.confidence,
+                        "evidence": t.evidence,
+                    }
+                    for t in self.detected.values()
                 ],
-                rows=rows,
-                score=score,
-                max_score=max_score,
-                description=self._build_description(),
-            ),
+                "findings": self.findings,
+                "rows": rows,
+                "score": score,
+                "max_score": max_score,
+            }
         )
-
-        if self.findings["database"]:
-            scanner.report.add_module(
-                "tech_database",
-                Report.list(
-                    title="Database Fingerprint Hints",
-                    items=self.findings["database"],
-                    score=0,
-                    max_score=0,
-                    description=
-                    "Indirect signals about the backing database engine.",
-                ),
-            )
-
-        if self.findings["sensitive_files"]:
-            scanner.report.add_module(
-                "tech_sensitive_files",
-                Report.list(
-                    title="Exposed Sensitive Files",
-                    items=self.findings["sensitive_files"],
-                    score=0,
-                    max_score=0,
-                    description=
-                    "Potentially sensitive files/paths accessible on the target.",
-                ),
-            )
-
-        if self.findings["admin_panels"]:
-            scanner.report.add_module(
-                "tech_admin_panels",
-                Report.list(
-                    title="Accessible Admin Panels",
-                    items=self.findings["admin_panels"],
-                    score=0,
-                    max_score=0,
-                    description=
-                    "Admin/DB-admin panels reachable without authentication checks.",
-                ),
-            )
-
-        if self.findings["api_endpoints"]:
-            scanner.report.add_module(
-                "tech_api_endpoints",
-                Report.list(
-                    title="Discovered API Endpoints",
-                    items=self.findings["api_endpoints"],
-                    score=0,
-                    max_score=0,
-                    description=
-                    "API/schema-discovery paths that responded on the target.",
-                ),
-            )
-
-        if self.findings["sourcemaps"]:
-            scanner.report.add_module(
-                "tech_sourcemaps",
-                Report.list(
-                    title="Exposed Source Maps",
-                    items=self.findings["sourcemaps"],
-                    score=0,
-                    max_score=0,
-                    description="JavaScript source maps exposed in production, "
-                    "which can leak original source code.",
-                ),
-            )
-
-        if self.findings["outdated"]:
-            scanner.report.add_module(
-                "tech_outdated",
-                Report.list(
-                    title="Outdated / EOL Technologies",
-                    items=self.findings["outdated"],
-                    score=0,
-                    max_score=0,
-                    description=
-                    "Detected technologies below their known-safe minimum version.",
-                ),
-            )

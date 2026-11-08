@@ -21,10 +21,7 @@ class BaseModule(ABC):
     def __init__(self):
         self.score = self.max_score
 
-    # --------------------------------------------------
-    # V1 Backward Compatibility Layer
-    # --------------------------------------------------
-    
+    # Backward Compatibility Layer
     def info(self, scanner: 'Scanner', message: str):
         if hasattr(scanner, "logger"):
             scanner.logger.info(f"[{self.name}] {message}")
@@ -84,10 +81,7 @@ class BaseModule(ABC):
     def print_empty(self, scanner: 'Scanner', title: str, message: str = "No data found."):
         pass # UI handled completely by scanner V2 now
 
-    # --------------------------------------------------
     # Module Execution
-    # --------------------------------------------------
-
     @abstractmethod
     async def run(self, scanner: 'Scanner') -> Optional[ModuleResult]:
         """

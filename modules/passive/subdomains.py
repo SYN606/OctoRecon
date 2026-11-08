@@ -16,7 +16,8 @@ from urllib.parse import urlparse
 from rich.table import Table
 
 from core.base_module import BaseModule
-from core.report_schema import Report
+from core.models import ModuleResult, Finding, Severity
+import config
 
 
 class Module(BaseModule):
@@ -38,7 +39,7 @@ class Module(BaseModule):
 
     # Per-request HTTP timeout (seconds). Kept short so a single
     # slow/unresponsive source can't stall the whole module.
-    HTTP_TIMEOUT = 7
+    HTTP_TIMEOUT = 4
 
     # Small stagger between kicking off each source's first request.
     # Sources still run concurrently overall, but this avoids firing
@@ -197,29 +198,29 @@ class Module(BaseModule):
         scanner,
         url,
         source_name,
+        extra_headers=None,
         retries=2,
         backoff=1.5,
     ):
         """
         GET a URL with retries + exponential backoff on 429/503
         (rate limit / temporarily unavailable) responses.
-
-        Returns the response on success, or None if it never
-        succeeded — in which case self.source_status[source_name]
-        is already set (as a clean, user-facing label) to explain
-        why, with the underlying detail kept in self._raw_status.
         """
 
         delay = backoff
 
         for attempt in range(retries + 1):
 
+            req_headers = dict(self._headers())
+            if extra_headers:
+                req_headers.update(extra_headers)
+
             try:
 
                 response = await self.get(
                     scanner,
                     url,
-                    headers=self._headers(),
+                    headers=req_headers,
                     timeout=self.HTTP_TIMEOUT,
                 )
 
@@ -440,10 +441,16 @@ class Module(BaseModule):
         url = ("https://otx.alienvault.com/api/v1/"
                f"indicators/domain/{self.domain}/passive_dns")
 
+        extra_headers = {}
+        otx_key = getattr(config, "ALIENVAULT_API_KEY", None)
+        if otx_key:
+            extra_headers["X-OTX-API-KEY"] = otx_key
+
         response = await self._get_with_retry(
             scanner,
             url,
             "AlienVault OTX",
+            extra_headers=extra_headers if extra_headers else None,
         )
 
         if response is None:
@@ -731,10 +738,16 @@ class Module(BaseModule):
         url = ("https://urlscan.io/api/v1/search/"
                f"?q=domain:{self.domain}")
 
+        extra_headers = {}
+        urlscan_key = getattr(config, "URLSCAN_API_KEY", None)
+        if urlscan_key:
+            extra_headers["API-Key"] = urlscan_key
+
         response = await self._get_with_retry(
             scanner,
             url,
             "URLScan",
+            extra_headers=extra_headers if extra_headers else None,
         )
 
         if response is None:
@@ -854,18 +867,9 @@ class Module(BaseModule):
             self.fetch_threatminer,
         )
 
-        async def staggered(index, fetcher):
-
-            # Space out each source's *first* request instead of
-            # firing all ten in the same instant. Sources still run
-            # concurrently (no source blocks another), this only
-            # delays the starting gun for each one.
-            await asyncio.sleep(index * self.SOURCE_START_DELAY)
-
-            return await fetcher(scanner)
-
+        # Run all passive source fetchers concurrently
         results = await asyncio.gather(
-            *(staggered(i, fetcher) for i, fetcher in enumerate(fetchers)),
+            *(fetcher(scanner) for fetcher in fetchers),
             return_exceptions=True,
         )
 
@@ -987,12 +991,13 @@ class Module(BaseModule):
         async def worker(host):
             async with semaphore:
                 ip = await self.resolve_ip(host)
-                alive = await self.check_alive(
-                    scanner,
-                    host,
-                )
+                alive = False
                 ptr = "-"
                 if ip and ip != "-":
+                    alive = await self.check_alive(
+                        scanner,
+                        host,
+                    )
                     try:
                         rev_name = dns.reversename.from_address(ip)
                         answers = await resolver.resolve(rev_name, "PTR")
@@ -1214,20 +1219,34 @@ class Module(BaseModule):
                         graph["edges"].append({"source": sub_node_id, "target": ip_node_id, "relation": "resolves_to"})
                         existing_edge_keys.add(ip_edge_key)
 
-        scanner.report.add_module(
-            self.name,
-            Report.table(
-                title="Passive Subdomain Discovery",
-                columns=[
-                    "Subdomain",
-                    "IP",
-                    "Reverse DNS",
-                    "Status",
-                    "Source",
-                ],
-                rows=rows,
-                description=description,
-                score=self.score,
-                max_score=self.max_score,
-            ),
+        findings: list[Finding] = []
+        if not self.results:
+            findings.append(Finding(
+                title="No Subdomains Discovered",
+                severity=Severity.INFO,
+                description="No public subdomains were discovered across passive sources."
+            ))
+        else:
+            findings.append(Finding(
+                title="Passive Subdomains Discovered",
+                severity=Severity.INFO,
+                description=f"Discovered {len(self.results)} unique subdomains ({alive} alive, {dead} dead)."
+            ))
+
+        return ModuleResult(
+            name=self.name,
+            category=self.category,
+            summary=description,
+            findings=findings,
+            data={
+                "domain": self.domain,
+                "count": len(self.results),
+                "alive": alive,
+                "dead": dead,
+                "results": self.results,
+                "rows": rows,
+                "source_status": self.source_status,
+                "score": self.score,
+                "max_score": self.max_score,
+            }
         )

@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from rich.table import Table
 
 from core.base_module import BaseModule
-from core.report_schema import Report
+from core.schemas import ModuleResult
 
 WEAK_CIPHER_MARKERS = (
     "RC4",
@@ -96,21 +96,15 @@ class SSLScanner(BaseModule):
 
             for key, value in data.items():
                 table.add_row(key, str(value))
-
             scanner.console.print(table)
-
-            scanner.report.add_module(
-                self.name,
-                Report.keyvalue(
-                    title="SSL Certificate",
-                    data=data,
-                    score=0,
-                    max_score=max_score,
-                    description="Unable to inspect SSL certificate.",
-                ),
+            result = ModuleResult(
+                module_name=self.name,
+                score=0,
+                max_score=max_score,
+                description="Unable to inspect SSL certificate.",
+                data=[{"Property": k, "Value": str(v)} for k, v in data.items()]
             )
-
-            return
+            return result
 
         loop = asyncio.get_running_loop()
 
@@ -324,13 +318,10 @@ class SSLScanner(BaseModule):
                        f"using {data.get('Cipher', '-')}. "
                        f"Status: {data.get('Status', '-')}")
 
-        scanner.report.add_module(
-            self.name,
-            Report.keyvalue(
-                title="SSL Certificate",
-                data=data,
-                score=score,
-                max_score=max_score,
-                description=description,
-            ),
+        return ModuleResult(
+            module_name=self.name,
+            score=score,
+            max_score=max_score,
+            description=description,
+            data=[{"Property": k, "Value": str(v)} for k, v in data.items()]
         )

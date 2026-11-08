@@ -57,6 +57,15 @@
             <p class="text-xs text-gray-500 mono mt-1">v2.0 // Passive Intelligence Engine</p>
         </div>
         <div class="flex items-center gap-3">
+            <button onclick="openHistoryModal()"
+                class="px-4 py-2 text-sm border border-gray-700 hover:border-gray-400 text-gray-300 rounded transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Scan History
+            </button>
+
             <button onclick="document.getElementById('fileUpload').click()"
                 class="px-4 py-2 text-sm border border-gray-700 hover:border-gray-400 text-gray-300 rounded transition flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,14 +76,20 @@
             </button>
             <input type="file" id="fileUpload" accept=".json" class="hidden" onchange="importReport(event)">
 
-            <button id="exportBtn" onclick="exportReport()"
-                class="hidden px-4 py-2 text-sm bg-white text-black font-semibold rounded hover:bg-gray-200 transition flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                </svg>
-                Export Report
-            </button>
+            <div id="exportMenu" class="hidden flex items-center gap-2">
+                <button onclick="exportReport()"
+                    class="px-3 py-2 text-xs bg-gray-800 hover:bg-gray-700 text-white rounded transition flex items-center gap-1">
+                    JSON
+                </button>
+                <button onclick="exportCSV()"
+                    class="px-3 py-2 text-xs bg-gray-800 hover:bg-gray-700 text-white rounded transition flex items-center gap-1">
+                    CSV
+                </button>
+                <button onclick="exportPDF()"
+                    class="px-3 py-2 text-xs bg-white text-black font-semibold rounded hover:bg-gray-200 transition flex items-center gap-1">
+                    PDF Report
+                </button>
+            </div>
         </div>
     </nav>
 
@@ -88,7 +103,14 @@
 
                 <label class="block mb-1 text-sm text-gray-300">Target URL</label>
                 <input type="text" id="targetUrl" placeholder="example.com or https://example.com"
-                    class="w-full bg-black border border-gray-700 rounded p-2.5 mb-6 text-white focus:outline-none focus:border-white transition text-sm">
+                    class="w-full bg-black border border-gray-700 rounded p-2.5 mb-3 text-white focus:outline-none focus:border-white transition text-sm">
+
+                <div class="mb-5 flex items-center gap-2 p-2.5 bg-gray-900/60 border border-gray-800 rounded">
+                    <input type="checkbox" id="activeMode" class="w-4 h-4 rounded bg-black border-gray-700 text-white focus:ring-0">
+                    <label for="activeMode" class="text-xs text-gray-300 cursor-pointer select-none">
+                        <span class="font-semibold text-white">Active Probes</span> (WAF triggers, brute-force checks)
+                    </label>
+                </div>
 
                 <div class="flex justify-between items-center mb-3 border-b border-gray-800 pb-2">
                     <div>
@@ -397,14 +419,31 @@
             btn.innerHTML = `<span class="animate-pulse">Executing...</span>`;
 
             currentReportData = null;
-            document.getElementById('exportBtn').classList.add('hidden');
+            document.getElementById('exportMenu').classList.add('hidden');
+            const activeMode = document.getElementById('activeMode').checked;
+            const loaderText = document.getElementById('loaderText');
+            loaderText.innerText = "Connecting to target & initializing modules...";
+
+            // Start live progress polling
+            const progressTimer = setInterval(async () => {
+                try {
+                    const pRes = await fetch('/api/scan/progress');
+                    const pData = await pRes.json();
+                    if (pData && pData[target]) {
+                        const cur = pData[target];
+                        loaderText.innerText = `Scanning: ${cur.module || 'Running'} (${cur.percent || 0}% - ${cur.status})`;
+                    }
+                } catch (e) {}
+            }, 800);
 
             try {
                 const res = await fetch('/api/scan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ target, modules: selected })
+                    body: JSON.stringify({ target, modules: selected, active_mode: activeMode })
                 });
+
+                clearInterval(progressTimer);
 
                 if (!res.ok) {
                     const err = await res.json();
@@ -415,9 +454,11 @@
                 showToast("Scan completed successfully!", "success");
                 renderReport(report);
             } catch (error) {
+                clearInterval(progressTimer);
                 showToast(`Scan failed: ${error.message}`, "error");
                 document.getElementById('emptyState').classList.remove('hidden');
             } finally {
+                clearInterval(progressTimer);
                 document.getElementById('loader').classList.add('hidden');
                 btn.disabled = false;
                 btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Execute Scan`;
@@ -443,6 +484,107 @@
                 showToast("Report exported successfully.", "success");
             } catch (err) {
                 showToast("Failed to export report.", "error");
+            }
+        }
+
+        // Export CSV Report
+        function exportCSV() {
+            if (!currentReportData) return showToast("No report to export.", "error");
+            if (currentReportData.scan_id) {
+                window.location.href = `/api/export/${currentReportData.scan_id}/csv`;
+                showToast("Downloading CSV report...", "success");
+            } else {
+                showToast("CSV export requires a saved scan ID.", "error");
+            }
+        }
+
+        // Export PDF Report
+        function exportPDF() {
+            if (!currentReportData) return showToast("No report to export.", "error");
+            if (currentReportData.scan_id) {
+                window.location.href = `/api/export/${currentReportData.scan_id}/pdf`;
+                showToast("Generating PDF report...", "success");
+            } else {
+                showToast("PDF export requires a saved scan ID.", "error");
+            }
+        }
+
+        // Scan History Modal Functions
+        async function openHistoryModal() {
+            const modal = document.getElementById('historyModal');
+            modal.classList.remove('hidden');
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-500">Loading scan history...</td></tr>';
+
+            try {
+                const res = await fetch('/api/scans');
+                if (!res.ok) throw new Error("Failed to load history");
+                const scans = await res.json();
+
+                if (!scans || scans.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-500">No past scans recorded.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                scans.forEach(s => {
+                    const gradeColor = s.grade && s.grade.startsWith('A') ? 'text-green-400' : (s.grade && (s.grade.startsWith('B') || s.grade.startsWith('C')) ? 'text-yellow-400' : 'text-red-400');
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-gray-800/60 hover:bg-gray-900/40 text-xs';
+                    tr.innerHTML = `
+                        <td class="p-3 mono font-semibold text-white">${s.id}</td>
+                        <td class="p-3 mono text-gray-200 truncate max-w-[200px]">${s.target}</td>
+                        <td class="p-3 mono font-bold ${gradeColor}">${s.grade || 'N/A'}</td>
+                        <td class="p-3 mono text-gray-300">${s.total_score} / ${s.max_score}</td>
+                        <td class="p-3 mono text-gray-500">${s.timestamp.slice(0, 19).replace('T', ' ')}</td>
+                        <td class="p-3 flex items-center gap-2">
+                            <button onclick="loadHistoryScan(${s.id})" class="px-2 py-1 bg-white text-black font-semibold rounded hover:bg-gray-200 transition">View</button>
+                            <a href="/api/export/${s.id}/pdf" class="px-2 py-1 bg-gray-800 text-gray-300 hover:text-white rounded transition">PDF</a>
+                            <button onclick="deleteHistoryScan(${s.id})" class="px-2 py-1 bg-red-950 text-red-300 hover:bg-red-900 rounded transition">Del</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500">Failed to load history: ${err.message}</td></tr>`;
+            }
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        async function loadHistoryScan(scanId) {
+            closeHistoryModal();
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('resultsContent').classList.add('hidden');
+            document.getElementById('loader').classList.remove('hidden');
+            document.getElementById('loaderText').innerText = `Loading historical scan #${scanId}...`;
+
+            try {
+                const res = await fetch(`/api/scans/${scanId}`);
+                if (!res.ok) throw new Error("Could not retrieve scan");
+                const report = await res.json();
+                report.scan_id = scanId;
+                renderReport(report);
+                showToast(`Loaded historical scan #${scanId}`, "success");
+            } catch (err) {
+                showToast(`Failed: ${err.message}`, "error");
+                document.getElementById('emptyState').classList.remove('hidden');
+            } finally {
+                document.getElementById('loader').classList.add('hidden');
+            }
+        }
+
+        async function deleteHistoryScan(scanId) {
+            if (!confirm(`Delete scan #${scanId}?`)) return;
+            try {
+                const res = await fetch(`/api/scans/${scanId}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error("Delete failed");
+                showToast(`Scan #${scanId} deleted`, "success");
+                openHistoryModal();
+            } catch (err) {
+                showToast(`Error: ${err.message}`, "error");
             }
         }
 
@@ -706,7 +848,7 @@
         // Render the UI from a JSON Report object
         function renderReport(report) {
             currentReportData = report;
-            document.getElementById('exportBtn').classList.remove('hidden');
+            document.getElementById('exportMenu').classList.remove('hidden');
 
             document.getElementById('emptyState').classList.add('hidden');
             document.getElementById('resultsContent').classList.remove('hidden');
@@ -791,6 +933,37 @@
             });
         }
     </script>
+
+    <!-- Scan History Modal -->
+    <div id="historyModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-[#0f0f0f] border border-gray-800 rounded-xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl">
+            <div class="p-5 border-b border-gray-800 flex justify-between items-center">
+                <div>
+                    <h3 class="text-lg font-bold text-white tracking-tight">Scan History</h3>
+                    <p class="text-xs text-gray-500 mono">Past reconnaissance reports saved in SQLite database</p>
+                </div>
+                <button onclick="closeHistoryModal()" class="text-gray-400 hover:text-white text-sm px-2 py-1 rounded border border-gray-800 hover:border-gray-600 transition">
+                    Esc / Close
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-5">
+                <table class="w-full text-left text-gray-300">
+                    <thead class="text-xs uppercase text-gray-500 bg-black/50 border-b border-gray-800">
+                        <tr>
+                            <th class="p-3">ID</th>
+                            <th class="p-3">Target</th>
+                            <th class="p-3">Grade</th>
+                            <th class="p-3">Score</th>
+                            <th class="p-3">Timestamp</th>
+                            <th class="p-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

@@ -44,44 +44,96 @@ Copy-Item example.env .env
 cp example.env .env
 ```
 
-Open `.env` in your text editor and add your free API keys for Shodan, AlienVault, SecurityTrails, etc.
+Open `.env` in your text editor and add your free API keys for Shodan, IPInfo, AlienVault, or URLScan if available.
 
 ---
 
 ## 💻 Usage
 
-### Launch the Web Dashboard (Recommended)
-Provides a beautiful hacker-themed UI to scan targets, inspect the interactive DNSDumpster-style infrastructure graph, export JSON reports, and read old reports offline.
+### Launch the Web Dashboard
+Provides a sleek hacker-themed UI with real-time scan progress, live Cytoscape infrastructure graph, persistent scan history (SQLite), and one-click PDF, CSV, and JSON report exports.
 ```bash
 python octorecon.py web
 ```
 *Access the dashboard at: `http://127.0.0.1:8000`*
 
+---
+
 ### CLI Mode
 
-**DNS Intelligence & Infrastructure Mapping (DNSDumpster Style):**
+#### 1. Full Concurrent Scan
+```bash
+# Run all 20 modules concurrently
+python octorecon.py scan https://example.com
+
+# Enable active probing (WAF trigger probe & path brute-forcing)
+python octorecon.py scan https://example.com --active
+
+# Export report directly to JSON, PDF, and CSV
+python octorecon.py scan https://example.com --export report.json --pdf report.pdf --csv report.csv
+```
+
+#### 2. Run Specific Modules
+```bash
+# Using module name, slug, or alias
+python octorecon.py scan https://example.com -m "dns, ssl, tech, headers"
+```
+
+#### 3. Run Any Individual Module Directly
+Every module has its own dedicated CLI command or can be invoked via `module`:
+```bash
+# Dedicated CLI commands:
+python octorecon.py ssl https://example.com
+python octorecon.py headers https://example.com
+python octorecon.py cookies https://example.com
+python octorecon.py tech https://example.com --active
+python octorecon.py whois example.com
+python octorecon.py broken-links https://example.com
+python octorecon.py subdomains example.com
+python octorecon.py firewall https://example.com
+python octorecon.py emails https://example.com
+python octorecon.py javascript https://example.com
+python octorecon.py robots https://example.com
+python octorecon.py sitemap https://example.com
+python octorecon.py securitytxt https://example.com
+python octorecon.py shodan example.com
+python octorecon.py ipinfo example.com
+python octorecon.py csp https://example.com
+python octorecon.py methods https://example.com
+python octorecon.py redirects https://example.com
+python octorecon.py wayback example.com
+
+# Generic dynamic module runner:
+python octorecon.py module ssl example.com
+python octorecon.py module tech https://example.com
+```
+
+#### 4. DNS Intelligence & Infrastructure Mapping
 ```bash
 # Full DNS record and security audit
 python octorecon.py dns example.com
 
-# Include passive subdomain enumeration and display infrastructure graph tree
+# Include passive subdomain discovery and infrastructure graph tree
 python octorecon.py dns example.com --subdomains --graph
 
-# Export full DNS intelligence report and graph relationships to JSON
-python octorecon.py dns example.com --subdomains --export example_dns.json
+# Export DNS report to JSON, PDF, or CSV
+python octorecon.py dns example.com --subdomains --export example_dns.json --pdf example_dns.pdf
 ```
 
-**Run a full concurrent scan against a target:**
+#### 5. Scan History & Database Queries
+Every scan is automatically indexed in an embedded SQLite database (`database/octorecon.db`):
 ```bash
-python octorecon.py scan https://example.com
+# View list of past scans
+python octorecon.py history
+
+# Inspect findings of a specific past scan
+python octorecon.py show-scan 1
+
+# Export a past scan from the database
+python octorecon.py export 1 --pdf past_scan.pdf --csv past_scan.csv
 ```
 
-**Run specific modules only:**
-```bash
-python octorecon.py scan https://example.com -m "DNS, Firewall / WAF Detection, Shodan Intelligence"
-```
-
-**List all available modules:**
+#### 6. List All Modules & CLI Commands
 ```bash
 python octorecon.py list-modules
 ```

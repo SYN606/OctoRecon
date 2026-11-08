@@ -4,12 +4,13 @@ Author : 0ct0pu3
 VERSION : 1.0.0
 """
 import re
+import asyncio
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
 from core.base_module import BaseModule
-from core.report_schema import Report
+from core.models import ModuleResult, Finding, Severity
 from rich.table import Table
 
 
@@ -47,31 +48,36 @@ class Module(BaseModule):
 
         self.reset_score()
 
-        try:
-
-            response = await self.get(
-                scanner,
-                scanner.target,
-            )
-
-        except Exception as e:
-
-            self.error(scanner, str(e))
-
-            scanner.report.add_module(
-                self.name,
-                Report.text(
-                    title="JavaScript Analysis",
-                    content=f"Unable to fetch target.\n\n{e}",
-                    score=0,
-                    max_score=self.max_score,
-                    description="Target page could not be downloaded.",
-                ),
-            )
-            return
+        html_text = ""
+        if hasattr(scanner, "shared_cache") and "root_html" in scanner.shared_cache:
+            html_text = scanner.shared_cache["root_html"]
+        elif getattr(scanner, "response", None) is not None and getattr(scanner.response, "text", None):
+            html_text = scanner.response.text
+        else:
+            try:
+                response = await self.get(
+                    scanner,
+                    scanner.target,
+                )
+                html_text = response.text
+            except Exception as e:
+                self.error(scanner, str(e))
+                return ModuleResult(
+                    name=self.name,
+                    category=self.category,
+                    summary="Target page could not be downloaded.",
+                    findings=[
+                        Finding(
+                            title="Target Unreachable",
+                            severity=Severity.HIGH,
+                            description=str(e),
+                        )
+                    ],
+                    data={"error": str(e), "score": 0, "max_score": self.max_score},
+                )
 
         soup = BeautifulSoup(
-            response.text,
+            html_text,
             "html.parser",
         )
 
@@ -103,227 +109,115 @@ class Module(BaseModule):
         js_files = sorted(set(js_files))
 
         # ---------------------------------------
-        # Analyze JavaScript Files
+        # Analyze JavaScript Files Concurrently
         # ---------------------------------------
+        sem = asyncio.Semaphore(15)
 
-        for js in js_files:
-
+        async def _analyze_js(js):
             try:
-
-                r = await self.get(
-                    scanner,
-                    js,
-                )
-
+                async with sem:
+                    r = await self.get(scanner, js, timeout=8)
             except Exception:
-
-                continue
+                return None
 
             text = r.text
+            local_sm = []
+            local_ws = []
+            local_fb = []
+            local_api = []
+            local_sec = []
 
-            # ---------------------------------------
             # Source Maps
-            # ---------------------------------------
+            if js.endswith(".map") or "sourceMappingURL=" in text:
+                local_sm.append(js)
 
-            if js.endswith(".map"):
-                source_maps.append(js)
-
-            if "sourceMappingURL=" in text:
-                source_maps.append(js)
-
-            if js.endswith(".min.js") and "sourceMappingURL=" in text:
-                source_maps.append(js)
-
-            if js.endswith(".bundle.js") and "sourceMappingURL=" in text:
-                source_maps.append(js)
-
-            # ---------------------------------------
             # WebSocket URLs
-            # ---------------------------------------
+            local_ws.extend(re.findall(r"wss?://[^\s\"']+", text))
 
-            websocket_urls.extend(re.findall(
-                r"wss?://[^\s\"']+",
-                text,
-            ))
-
-            # ---------------------------------------
             # Firebase References
-            # ---------------------------------------
-
-            firebase_keywords = [
-                "firebase",
-                "firebaseapp.com",
-                "firebaseio.com",
-                "firestore",
-                "googleapis.com",
-            ]
-
             lower = text.lower()
-
-            for keyword in firebase_keywords:
-
+            for keyword in ["firebase", "firebaseapp.com", "firebaseio.com", "firestore", "googleapis.com"]:
                 if keyword in lower:
-                    firebase_hits.append(js)
+                    local_fb.append(js)
                     break
 
-            # ---------------------------------------
             # API Endpoints
-            # ---------------------------------------
-
             for pattern in self.API_PATTERNS:
-
                 try:
-
-                    matches = re.findall(
-                        pattern,
-                        text,
-                    )
-
+                    matches = re.findall(pattern, text)
                     if matches:
-                        api_hits.extend(matches)
-
+                        local_api.extend(matches)
                 except Exception:
                     continue
 
-            # ---------------------------------------
             # Secrets Detection
-            # ---------------------------------------
-
             for name, pattern in self.SECRET_PATTERNS.items():
-
                 try:
-
-                    matches = re.findall(
-                        pattern,
-                        text,
-                    )
-
+                    matches = re.findall(pattern, text)
                     for secret in matches:
-
-                        secret_hits.append((
-                            name,
-                            secret[:50],
-                        ))
-
+                        local_sec.append((name, secret[:50]))
                 except Exception:
                     continue
 
-            # ---------------------------------------
-            # Interesting URLs
-            # ---------------------------------------
-
-            interesting_patterns = [
-                r"https?://[^\s\"'<>]+",
-                r"/admin[^\s\"']*",
-                r"/api/[^\s\"']*",
-                r"/uploads/[^\s\"']*",
-                r"/backup[^\s\"']*",
-                r"/private[^\s\"']*",
-                r"/internal[^\s\"']*",
-                r"/graphql[^\s\"']*",
-            ]
-
-            interesting_urls = []
-
-            for pattern in interesting_patterns:
-
-                try:
-
-                    interesting_urls.extend(re.findall(
-                        pattern,
-                        text,
-                    ))
-
-                except Exception:
-                    continue
-
-            interesting_urls = sorted(set(interesting_urls))
-
-            # ---------------------------------------
             # Email Addresses
-            # ---------------------------------------
+            emails = sorted(set(re.findall(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", text)))
 
-            emails = sorted(
-                set(
-                    re.findall(
-                        r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
-                        text,
-                    )))
-
-            # ---------------------------------------
             # IPv4 Addresses
-            # ---------------------------------------
-
-            ips = sorted(set(re.findall(
-                r"(?:\d{1,3}\.){3}\d{1,3}",
-                text,
-            )))
-
-            # ---------------------------------------
-            # Admin / Sensitive Keywords
-            # ---------------------------------------
+            ips = sorted(set(re.findall(r"(?:\d{1,3}\.){3}\d{1,3}", text)))
 
             admin_keywords = [
-                "admin",
-                "administrator",
-                "root",
-                "password",
-                "passwd",
-                "token",
-                "secret",
-                "apikey",
-                "api_key",
-                "accesskey",
-                "privatekey",
-                "jwt",
-                "bearer",
-                "authorization",
+                "admin", "administrator", "root", "password", "passwd",
+                "token", "secret", "apikey", "api_key", "accesskey",
+                "privatekey", "jwt", "bearer", "authorization",
             ]
+            keyword_hits = [kw for kw in admin_keywords if kw in lower]
 
-            keyword_hits = []
+            return {
+                "js": js,
+                "sm": local_sm,
+                "ws": local_ws,
+                "fb": local_fb,
+                "api": local_api,
+                "sec": local_sec,
+                "emails": emails,
+                "ips": ips,
+                "keyword_hits": keyword_hits
+            }
 
-            lower = text.lower()
+        js_results = await asyncio.gather(*(_analyze_js(js) for js in js_files))
 
-            for keyword in admin_keywords:
+        for res in js_results:
+            if not res:
+                continue
+            js = res["js"]
+            source_maps.extend(res["sm"])
+            websocket_urls.extend(res["ws"])
+            firebase_hits.extend(res["fb"])
+            api_hits.extend(res["api"])
+            secret_hits.extend(res["sec"])
 
-                if keyword in lower:
-                    keyword_hits.append(keyword)
-
-            # ---------------------------------------
-            # Score Calculation
-            # ---------------------------------------
-
-            if source_maps:
+            if res["sm"]:
                 self.deduct(2)
-
-            if firebase_hits:
+            if res["fb"]:
                 self.deduct(2)
-
-            if websocket_urls:
+            if res["ws"]:
                 self.deduct(1)
-
-            if api_hits:
-                self.deduct(min(len(api_hits), 3))
-
-            if keyword_hits:
-                self.deduct(min(len(keyword_hits), 3))
-
-            if secret_hits:
+            if res["api"]:
+                self.deduct(min(len(res["api"]), 3))
+            if res["keyword_hits"]:
+                self.deduct(min(len(res["keyword_hits"]), 3))
+            if res["sec"]:
                 self.deduct(10)
-
-            # ---------------------------------------
-            # Report Row
-            # ---------------------------------------
 
             rows.append({
                 "JavaScript": js,
-                "APIs": len(set(api_hits)),
-                "Secrets": len(secret_hits),
-                "Emails": len(emails),
-                "IPs": len(ips),
-                "Source Maps": ("Yes" if js in source_maps else "No"),
-                "Firebase": ("Yes" if js in firebase_hits else "No"),
-                "WebSocket": ("Yes" if websocket_urls else "No"),
+                "APIs": len(set(res["api"])),
+                "Secrets": len(res["sec"]),
+                "Emails": len(res["emails"]),
+                "IPs": len(res["ips"]),
+                "Source Maps": ("Yes" if res["sm"] else "No"),
+                "Firebase": ("Yes" if res["fb"] else "No"),
+                "WebSocket": ("Yes" if res["ws"] else "No"),
             })
 
         # ---------------------------------------
@@ -438,136 +332,74 @@ class Module(BaseModule):
 
             table.add_row("Status", "Not Found")
 
-            scanner.report.add_module(
-                self.name,
-                Report.text(
-                    title="JavaScript Analysis",
-                    content="No JavaScript files were detected.",
-                    score=self.max_score,
-                    max_score=self.max_score,
-                    description="No external JavaScript resources were found.",
-                ),
-            )
-
-            return
-
-        # ---------------------------------------
-        # JavaScript Intelligence Report
-        # ---------------------------------------
-
-        scanner.report.add_module(
-            self.name,
-            Report.table(
-                title="JavaScript Intelligence",
-                columns=[
-                    "JavaScript",
-                    "APIs",
-                    "Secrets",
-                    "Emails",
-                    "IPs",
-                    "Source Maps",
-                    "Firebase",
-                    "WebSocket",
+            return ModuleResult(
+                name=self.name,
+                category=self.category,
+                summary="No JavaScript files were detected.",
+                findings=[
+                    Finding(
+                        title="No External JavaScript Found",
+                        severity=Severity.INFO,
+                        description="No external JavaScript resources were found on the root page.",
+                    )
                 ],
-                rows=rows,
-                score=self.score,
-                max_score=self.max_score,
-                description=description,
-            ),
-        )
-
-        # ---------------------------------------
-        # API Endpoints
-        # ---------------------------------------
-
-        if api_hits:
-
-            scanner.report.add_module(
-                "javascript_endpoints",
-                Report.list(
-                    title="Discovered API Endpoints",
-                    items=api_hits,
-                    score=0,
-                    max_score=0,
-                    description=f"{len(api_hits)} endpoint(s) discovered.",
-                ),
+                data={"scripts_count": 0, "rows": [], "score": self.max_score, "max_score": self.max_score},
             )
 
         # ---------------------------------------
-        # Potential Secrets
+        # Structured Findings & Return
         # ---------------------------------------
 
-        if secret_hits:
-
-            scanner.report.add_module(
-                "javascript_secrets",
-                Report.table(
-                    title="Potential Secrets",
-                    columns=[
-                        "Type",
-                        "Preview",
-                    ],
-                    rows=[{
-                        "Type": secret_type,
-                        "Preview": preview,
-                    } for secret_type, preview in secret_hits],
-                    score=0,
-                    max_score=0,
-                    description=
-                    "Potential secrets detected inside JavaScript resources.",
-                ),
-            )
-
-        # ---------------------------------------
-        # Source Maps
-        # ---------------------------------------
+        findings: list[Finding] = []
+        for secret_type, preview in secret_hits:
+            findings.append(Finding(
+                title=f"Potential Secret in JavaScript: {secret_type}",
+                severity=Severity.HIGH,
+                description=f"Secret pattern {secret_type} detected: {preview}",
+            ))
 
         if source_maps:
-
-            scanner.report.add_module(
-                "javascript_sourcemaps",
-                Report.list(
-                    title="Source Maps",
-                    items=source_maps,
-                    score=0,
-                    max_score=0,
-                    description=
-                    f"{len(source_maps)} source map reference(s) detected.",
-                ),
-            )
-
-        # ---------------------------------------
-        # Firebase References
-        # ---------------------------------------
+            findings.append(Finding(
+                title="JavaScript Source Maps Exposed",
+                severity=Severity.LOW,
+                description=f"{len(source_maps)} source map reference(s) detected.",
+            ))
 
         if firebase_hits:
-
-            scanner.report.add_module(
-                "javascript_firebase",
-                Report.list(
-                    title="Firebase References",
-                    items=firebase_hits,
-                    score=0,
-                    max_score=0,
-                    description=
-                    f"{len(firebase_hits)} Firebase reference(s) detected.",
-                ),
-            )
-
-        # ---------------------------------------
-        # WebSocket URLs
-        # ---------------------------------------
+            findings.append(Finding(
+                title="Firebase Configuration Exposed in JavaScript",
+                severity=Severity.MEDIUM,
+                description=f"{len(firebase_hits)} Firebase URL(s) detected.",
+            ))
 
         if websocket_urls:
+            findings.append(Finding(
+                title="WebSocket Endpoints in JavaScript",
+                severity=Severity.INFO,
+                description=f"{len(websocket_urls)} WebSocket endpoint(s) detected.",
+            ))
 
-            scanner.report.add_module(
-                "javascript_websocket",
-                Report.list(
-                    title="WebSocket URLs",
-                    items=websocket_urls,
-                    score=0,
-                    max_score=0,
-                    description=
-                    f"{len(websocket_urls)} WebSocket endpoint(s) detected.",
-                ),
-            )
+        if api_hits:
+            findings.append(Finding(
+                title="Discovered API Endpoints in JavaScript",
+                severity=Severity.INFO,
+                description=f"{len(api_hits)} API endpoint(s) detected.",
+            ))
+
+        return ModuleResult(
+            name=self.name,
+            category=self.category,
+            summary=description,
+            findings=findings,
+            data={
+                "scripts_count": len(scripts),
+                "api_hits": api_hits,
+                "secret_hits": [{"type": t, "preview": p} for t, p in secret_hits],
+                "source_maps": source_maps,
+                "firebase_hits": firebase_hits,
+                "websocket_urls": websocket_urls,
+                "rows": rows,
+                "score": self.score,
+                "max_score": self.max_score,
+            }
+        )

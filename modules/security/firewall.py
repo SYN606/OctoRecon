@@ -123,21 +123,22 @@ class FirewallDetection(BaseModule):
         if scanner.response:
             self._analyze_response(scanner.response, detected_wafs, "Passive Baseline Response")
 
-        # 2. Active Probe (Safe non-destructive probe to check active WAF inspection)
-        try:
-            probe_url = urljoin(scanner.target, "/?octorecon_waf_probe=<script>alert(1)</script>&x=../etc/passwd")
-            probe_response = await scanner.client.get(probe_url)
-            
-            # Check if server blocked the probe (403 Forbidden, 406 Not Acceptable, 501, 999)
-            if probe_response.status_code in [403, 406, 429, 501, 999]:
-                self._analyze_response(probe_response, detected_wafs, f"Active Trigger Probe (HTTP {probe_response.status_code})")
+        # 2. Active Probe (Only if active_mode is enabled on scanner)
+        if getattr(scanner, "active_mode", False):
+            try:
+                probe_url = urljoin(scanner.target, "/?octorecon_waf_probe=<script>alert(1)</script>&x=../etc/passwd")
+                probe_response = await scanner.client.get(probe_url)
                 
-                # If status is blocked but no specific vendor name found, note generic block
-                if not detected_wafs:
-                    detected_wafs["Generic WAF / Filter"] = [f"Blocked malicious payload with HTTP {probe_response.status_code}"]
-        except Exception:
-            # Active probe failure is ignored gracefully
-            pass
+                # Check if server blocked the probe (403 Forbidden, 406 Not Acceptable, 501, 999)
+                if probe_response.status_code in [403, 406, 429, 501, 999]:
+                    self._analyze_response(probe_response, detected_wafs, f"Active Trigger Probe (HTTP {probe_response.status_code})")
+                    
+                    # If status is blocked but no specific vendor name found, note generic block
+                    if not detected_wafs:
+                        detected_wafs["Generic WAF / Filter"] = [f"Blocked malicious payload with HTTP {probe_response.status_code}"]
+            except Exception:
+                # Active probe failure is ignored gracefully
+                pass
 
         # 3. Format Results
         if detected_wafs:

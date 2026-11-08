@@ -6,6 +6,7 @@ VERSION : 1.0.0
 
 from __future__ import annotations
 
+import asyncio
 import re
 from collections import deque
 from urllib.parse import urljoin, urlparse
@@ -14,7 +15,7 @@ from bs4 import BeautifulSoup
 from bs4 import Comment
 
 from core.base_module import BaseModule
-from core.report_schema import Report
+from core.models import ModuleResult, Finding, Severity
 
 
 class Module(BaseModule):
@@ -460,98 +461,56 @@ class Module(BaseModule):
         queue = deque()
 
         # ==============================================
-        # Seed Queue
+        # Fetch Seed URLs Concurrently (Bounded Concurrency)
         # ==============================================
-
-        for path in self.COMMON_PATHS:
-
-            queue.append(urljoin(
-                scanner.target,
-                path,
-            ))
-
-        # ==============================================
-        # Crawl (capped at MAX_PAGES, enforced up front so
-        # the limit actually stops requests being made)
-        # ==============================================
-
-        while queue:
-
-            if len(visited) >= self.MAX_PAGES:
-
-                break
-
-            url = queue.popleft()
-
-            if url in visited:
-
-                continue
-
-            visited.add(url)
-
-            try:
-
-                response = await self.get(
-                    scanner,
-                    url,
-                    follow_redirects=True,
-                )
-
-            except Exception:
-
-                continue
-
-            if response.status_code != 200:
-
-                continue
-
-            html = response.text
-
-            soup, found = self.extract_html(html)
-
-            emails.update(found)
-
-            # ==========================================
-            # External JavaScript
-            # ==========================================
-
-            for js_url in self.extract_js_urls(
-                    soup,
-                    url,
-            ):
-
+        sem = asyncio.Semaphore(10)
+        seed_urls = [urljoin(scanner.target, path) for path in self.COMMON_PATHS]
+        
+        async def _fetch_page(u):
+            async with sem:
+                # Check root cache if available
+                if u.rstrip('/') == scanner.target.rstrip('/') and hasattr(scanner, "shared_cache") and "root_html" in scanner.shared_cache:
+                    return u, scanner.shared_cache["root_html"]
                 try:
-
-                    js = await self.get(
-                        scanner,
-                        js_url,
-                        follow_redirects=True,
-                    )
-
+                    resp = await self.get(scanner, u, follow_redirects=True, timeout=6)
+                    if resp.status_code == 200:
+                        return u, resp.text
                 except Exception:
+                    pass
+                return u, None
 
-                    continue
+        fetched_pages = await asyncio.gather(*(_fetch_page(u) for u in seed_urls))
+        
+        # Analyze fetched seed pages
+        js_to_fetch = set()
+        for u, html in fetched_pages:
+            visited.add(u)
+            if not html:
+                continue
+            soup, found = self.extract_html(html)
+            emails.update(found)
+            
+            # Collect JS files
+            for js_url in self.extract_js_urls(soup, u):
+                js_to_fetch.add(js_url)
 
-                if js.status_code != 200:
+        # Fetch external JS scripts concurrently
+        async def _fetch_js(js_u):
+            async with sem:
+                try:
+                    js_resp = await self.get(scanner, js_u, follow_redirects=True, timeout=6)
+                    if js_resp.status_code == 200:
+                        return js_resp.text
+                except Exception:
+                    pass
+                return None
 
-                    continue
-
-                emails.update(self.extract_normal(js.text))
-
-                emails.update(self.extract_obfuscated(js.text))
-
-            # ==========================================
-            # Internal Links
-            # ==========================================
-
-            for link in self.discover_links(
-                    soup,
-                    url,
-            ):
-
-                if link not in visited:
-
-                    queue.append(link)
+        if js_to_fetch:
+            js_results = await asyncio.gather(*(_fetch_js(ju) for ju in list(js_to_fetch)[:20]))
+            for js_text in js_results:
+                if js_text:
+                    emails.update(self.extract_normal(js_text))
+                    emails.update(self.extract_obfuscated(js_text))
 
         # ==============================================
         # Validation
@@ -663,26 +622,32 @@ class Module(BaseModule):
         # Report
         # ==============================================
 
-        scanner.report.add_module(
-            self.name,
-            Report.table(
-                title="Email Discovery",
-                columns=[
-                    "Email",
-                    "Category",
-                ],
-                rows=rows,
-                score=self.score,
-                max_score=self.max_score,
-                description=description,
-            ),
-        )
+        findings: list[Finding] = []
+        if not emails:
+            findings.append(Finding(
+                title="No Exposed Emails Found",
+                severity=Severity.INFO,
+                description=f"Scanned {len(visited)} pages, no email addresses were found."
+            ))
+        else:
+            findings.append(Finding(
+                title="Publicly Exposed Emails Discovered",
+                severity=Severity.LOW,
+                description=description
+            ))
 
-        self.print_table(
-            scanner,
-            title="Email Discovery",
-            columns=["Email", "Category"],
-            rows=rows,
+        return ModuleResult(
+            name=self.name,
+            category=self.category,
+            summary=description,
+            findings=findings,
+            data={
+                "emails": sorted(list(emails)),
+                "official": official,
+                "personal": personal,
+                "visited_pages": len(visited),
+                "rows": rows,
+                "score": self.score,
+                "max_score": self.max_score,
+            }
         )
-
-        return

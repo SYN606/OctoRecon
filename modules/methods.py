@@ -1,27 +1,26 @@
 """
 HTTP Methods Scanner
-Author : 0ct0pu3
-VERSION : 1.0.0
+Author : 0ct0pu3 / SYN606
+VERSION : 2.0.0
 """
 
 import httpx
 from rich.table import Table
-
 from core.base_module import BaseModule
-from core.report_schema import Report
-
+from core.schemas import ModuleResult
 
 class MethodScanner(BaseModule):
-
     name = "HTTP Methods"
     slug = "http-method"
     aliases = [
         "httpmethod",
         "http-method",
         "http",
+        "methods",
     ]
     category = "Web"
-    description = ("Identify supported HTTP methods.")
+    description = "Identify supported HTTP methods and detect risky methods (TRACE, WebDAV)."
+    max_score = 20
 
     COMMON_METHODS = [
         "GET",
@@ -35,8 +34,6 @@ class MethodScanner(BaseModule):
         "CONNECT",
     ]
 
-    # WebDAV / less-common methods that indicate extra attack surface
-    # if they show up unexpectedly.
     WATCH_METHODS = [
         "PROPFIND",
         "PROPPATCH",
@@ -48,24 +45,20 @@ class MethodScanner(BaseModule):
         "SEARCH",
     ]
 
-    # Weighted penalty per dangerous method (out of max_score=20)
     DANGEROUS_WEIGHTS = {
-        "TRACE": 8,  # Cross-Site Tracing (XST) risk
-        "PUT": 5,  # arbitrary file write
-        "DELETE": 5,  # arbitrary file delete
+        "TRACE": 8,
+        "PUT": 5,
+        "DELETE": 5,
         "CONNECT": 4,
     }
 
-    async def run(self, scanner):
-
+    async def run(self, scanner) -> ModuleResult:
+        result = ModuleResult(module_name=self.name, max_score=self.max_score)
         table = Table(title="HTTP Methods")
         table.add_column("Method", style="cyan")
         table.add_column("Status")
 
-        rows = []
-        score = 20
-        max_score = 20
-
+        score = self.max_score
         methods = []
         request_failed = False
 
@@ -73,13 +66,10 @@ class MethodScanner(BaseModule):
             response = await scanner.client.options(scanner.target, timeout=10)
         except httpx.TimeoutException:
             request_failed = True
-            scanner.console.print(
-                "[yellow]HTTP Methods module: OPTIONS request timed out.[/yellow]"
-            )
+            scanner.console.print("[yellow]HTTP Methods module: OPTIONS request timed out.[/yellow]")
         except httpx.RequestError as e:
             request_failed = True
-            scanner.console.print(
-                f"[yellow]HTTP Methods module: request failed ({e}).[/yellow]")
+            scanner.console.print(f"[yellow]HTTP Methods module: request failed ({e}).[/yellow]")
         else:
             allow = response.headers.get("Allow", "") if response else ""
             methods = [
@@ -88,24 +78,13 @@ class MethodScanner(BaseModule):
             ]
 
         if request_failed:
-            scanner.report.add_module(
-                self.name,
-                Report.table(
-                    title="HTTP Methods",
-                    columns=["Method", "Status"],
-                    rows=[],
-                    score=0,
-                    max_score=max_score,
-                    description="Enumerates supported HTTP methods. "
-                    "Skipped: OPTIONS request failed.",
-                ),
-            )
-            return
+            result.score = 0
+            result.description = "Enumerates supported HTTP methods. Skipped: OPTIONS request failed."
+            return result
 
         no_allow_header = not methods
 
         for method in self.COMMON_METHODS:
-
             enabled = method in methods
             status = "Enabled" if enabled else "Disabled"
 
@@ -117,30 +96,25 @@ class MethodScanner(BaseModule):
             table.add_row(
                 method,
                 f"[green]{status}[/green]" if enabled and "risk" not in status
-                else (f"[red]{status}[/red]"
-                      if enabled else f"[dim]{status}[/dim]"),
+                else (f"[red]{status}[/red]" if enabled else f"[dim]{status}[/dim]"),
             )
 
-            rows.append({
+            result.data.append({
                 "Method": method,
                 "Status": status,
             })
 
-        # --- Unlisted / WebDAV methods that showed up in Allow header ---
         extra_found = [m for m in methods if m not in self.COMMON_METHODS]
-
         for method in extra_found:
             is_watch = method in self.WATCH_METHODS
             status = "Enabled (WebDAV)" if is_watch else "Enabled (unlisted)"
-
             if is_watch:
-                score -= 3  # WebDAV methods add meaningful attack surface
+                score -= 3
 
             table.add_row(method, f"[red]{status}[/red]")
-            rows.append({"Method": method, "Status": status})
+            result.data.append({"Method": method, "Status": status})
 
-        score = max(score, 0)
-
+        result.score = max(score, 0)
         scanner.console.print(table)
 
         if no_allow_header:
@@ -148,19 +122,5 @@ class MethodScanner(BaseModule):
                 "[#6b6b6b] No 'Allow' header returned by server — results may be incomplete.[/#6b6b6b]"
             )
 
-        scanner.report.add_module(
-            self.name,
-            Report.table(
-                title="HTTP Methods",
-                columns=[
-                    "Method",
-                    "Status",
-                ],
-                rows=rows,
-                score=score,
-                max_score=max_score,
-                description=
-                "Enumerates supported HTTP methods, flags TRACE (XST risk), "
-                "and highlights unlisted/WebDAV methods found in the Allow header.",
-            ),
-        )
+        result.description = "Enumerates supported HTTP methods, flags TRACE (XST risk), and highlights unlisted/WebDAV methods."
+        return result

@@ -26,10 +26,13 @@ class IPInfoRecon(BaseModule):
             result.score = 0
             return result
             
-        try:
-            ip = socket.gethostbyname(hostname)
-        except Exception as e:
-            result.description = f"Failed to resolve IP: {e}"
+        ip = getattr(scanner, "shared_cache", {}).get("server_ip")
+        if not ip or ip == "N/A":
+            from core.scanner import async_resolve_ip
+            ip = await async_resolve_ip(hostname)
+
+        if not ip or ip == "N/A":
+            result.description = f"Failed to resolve IP for hostname: {hostname}"
             result.score = 0
             return result
 
